@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
@@ -43,6 +43,10 @@ app.include_router(notifications.router, prefix=f"{settings.API_V1_STR}/notifica
 @app.get("/")
 async def root():
     return {"message": "Welcome to PrepSphere API"}
+
+@app.head("/")
+async def root_head():
+    return Response(status_code=200)
 
 @app.get("/health")
 async def health_check():
