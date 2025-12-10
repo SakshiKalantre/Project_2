@@ -1,13 +1,14 @@
-from sqlalchemy import Column, Integer, String, DateTime, Enum, Boolean, ForeignKey, Text
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text
+from sqlalchemy.dialects.postgresql import ENUM as PGEnum
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.db.session import Base
 from enum import Enum as PyEnum
 
 class UserRole(str, PyEnum):
-    STUDENT = "student"
-    TPO = "tpo"
-    ADMIN = "admin"
+    STUDENT = "STUDENT"
+    TPO = "TPO"
+    ADMIN = "ADMIN"
 
 class User(Base):
     __tablename__ = "users"
@@ -18,7 +19,7 @@ class User(Base):
     first_name = Column(String, nullable=False)
     last_name = Column(String, nullable=False)
     phone_number = Column(String, nullable=True)
-    role = Column(Enum(UserRole), default=UserRole.STUDENT, nullable=False)
+    role = Column(PGEnum(UserRole, name="userrole", create_type=False), default=UserRole.STUDENT, nullable=False)
     is_active = Column(Boolean, default=True)
     is_approved = Column(Boolean, default=False)  # For TPO and Admin approval
     profile_complete = Column(Boolean, default=False)
