@@ -824,8 +824,9 @@ export default function StudentDashboard() {
                                       await fetch(`${API_BASE}/api/v1/events/${event.id}/register`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ user_id: u.id, email: current?.email, clerkUserId: (user as any)?.id || null }) })
                                     }
                                   } catch {}
-                                  const w = window.open(event.form_url, '_blank')
-                                  if (!w) { const a=document.createElement('a'); a.href=event.form_url; a.target='_blank'; document.body.appendChild(a); a.click(); a.remove() }
+                                  const url = event.form_url!
+                                  const w = window.open(url, '_blank')
+                                  if (!w) { const a=document.createElement('a'); a.href=url; a.target='_blank'; document.body.appendChild(a); a.click(); a.remove() }
                                 }}
                               >Google Form</a>
                             </div>
