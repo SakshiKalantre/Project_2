@@ -759,7 +759,7 @@ export default function StudentDashboard() {
                               } catch { alert('Failed to apply') }
                             }}>Apply Now</Button>
                             {job.job_url && (
-                              <Button variant="outline" onClick={()=>{ const w = window.open(job.job_url, '_blank'); if (!w) { const a=document.createElement('a'); a.href=job.job_url; a.target='_blank'; document.body.appendChild(a); a.click(); a.remove() } }}>Open Job Link</Button>
+                              <Button variant="outline" onClick={()=>{ const url = job.job_url!; const w = window.open(url, '_blank'); if (!w) { const a=document.createElement('a'); a.href=url; a.target='_blank'; document.body.appendChild(a); a.click(); a.remove() } }}>Open Job Link</Button>
                             )}
                           </div>
                         </CardContent>
