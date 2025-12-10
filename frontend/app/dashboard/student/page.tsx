@@ -20,6 +20,34 @@ import {
   X
 } from 'lucide-react'
 
+type JobListing = {
+  id: number
+  title: string
+  company: string
+  location: string
+  type?: string
+  job_url?: string
+}
+
+type EventItem = {
+  id: number
+  title: string
+  location: string
+  status?: string
+  date?: string
+  time?: string
+  category?: string
+  form_url?: string
+}
+
+type NotificationItem = {
+  id: number
+  title: string
+  message: string
+  time: string
+  read: boolean
+}
+
 export default function StudentDashboard() {
   const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001'
   const { user } = useUser()
@@ -41,9 +69,9 @@ export default function StudentDashboard() {
     skills: '',
     about: ''
   })
-  const [jobListings, setJobListings] = useState([])
-  const [events, setEvents] = useState([])
-  const [notifications, setNotifications] = useState([])
+  const [jobListings, setJobListings] = useState<JobListing[]>([])
+  const [events, setEvents] = useState<EventItem[]>([])
+  const [notifications, setNotifications] = useState<NotificationItem[]>([])
 
   // Fetch data from our API
   useEffect(() => {
