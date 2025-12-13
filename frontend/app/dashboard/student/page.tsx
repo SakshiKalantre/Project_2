@@ -97,7 +97,7 @@ export default function StudentDashboard() {
         }
         if (!email) return
 
-        const userRes = await fetch(`${API_BASE}/api/v1/users/by-email/${encodeURIComponent(email)}`)
+        let userRes = await fetch(`${API_BASE}/api/v1/users/by-email/${encodeURIComponent(email)}`)
         if (userRes.ok) {
           const userData = await userRes.json()
           uidLocal = userData.id
@@ -129,6 +129,28 @@ export default function StudentDashboard() {
               setUserFiles(files)
             }
           } catch {}
+        } else {
+          // First-time user: register in backend
+          const names = (displayName || '').split(' ')
+          const first_name = names[0] || ''
+          const last_name = names.slice(1).join(' ')
+          userRes = await fetch(`${API_BASE}/api/v1/users/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              clerk_user_id: (user as any)?.id || null,
+              email,
+              first_name,
+              last_name,
+              role: 'STUDENT'
+            })
+          })
+          if (userRes.ok) {
+            const userData = await userRes.json()
+            uidLocal = userData.id
+            setUserId(userData.id)
+            setProfile(prev => ({ ...prev, name: displayName || `${userData.first_name} ${userData.last_name}`, email: userData.email }))
+          }
         }
 
         const jobsResponse = await fetch(`${API_BASE}/api/v1/jobs`)
@@ -341,26 +363,14 @@ export default function StudentDashboard() {
       if (!userId || !file) return
       const form = new FormData()
       form.append('user_id', String(userId))
-      form.append('file_type', 'resume')
       form.append('file', file)
-      let res = await postFormDataWithProgress(`${API_BASE}/api/v1/files/upload-r2-multipart`, form, setResumeProgress)
-      if (!res.ok) {
-        const base64 = await toBase64(file)
-        res = await postJSONWithProgress(`${API_BASE}/api/v1/files/upload`, {
-          user_id: userId,
-          file_name: file.name,
-          mime_type: file.type,
-          file_type: 'resume',
-          content_base64: base64
-        }, setResumeProgress)
-        if (!res.ok) throw new Error('Failed to upload resume')
-      }
+      const res = await postFormDataWithProgress(`${API_BASE}/api/v1/files/resumes`, form, setResumeProgress)
+      if (!res.ok) throw new Error('Failed to upload resume')
       try {
         const saved = await res.json()
-        setUserFiles(prev => [saved, ...prev])
+        setUserFiles(prev => [{ id: saved.id, file_type: 'resume', filename: saved.filename, file_url: saved.file_url }, ...prev])
       } catch {
-        const filesRes = await fetch(`${API_BASE}/api/v1/files/by-user/${userId}`)
-        if (filesRes.ok) setUserFiles(await filesRes.json())
+        // no index route; keep current list
       }
       setResumeFile(null)
       setResumeProgress(0)
@@ -371,26 +381,15 @@ export default function StudentDashboard() {
       if (!userId || !file) return
       const form = new FormData()
       form.append('user_id', String(userId))
-      form.append('file_type', 'certificate')
+      form.append('title', title)
       form.append('file', file)
-      let res = await postFormDataWithProgress(`${API_BASE}/api/v1/files/upload-r2-multipart`, form, setCertProgress)
-      if (!res.ok) {
-        const base64 = await toBase64(file)
-        res = await postJSONWithProgress(`${API_BASE}/api/v1/files/upload`, {
-          user_id: userId,
-          file_name: file.name,
-          mime_type: file.type,
-          file_type: 'certificate',
-          content_base64: base64
-        }, setCertProgress)
-        if (!res.ok) throw new Error('Failed to upload certificate')
-      }
+      const res = await postFormDataWithProgress(`${API_BASE}/api/v1/files/certificates`, form, setCertProgress)
+      if (!res.ok) throw new Error('Failed to upload certificate')
       try {
         const saved = await res.json()
-        setUserFiles(prev => [saved, ...prev])
+        setUserFiles(prev => [{ id: saved.id, file_type: 'certificate', filename: saved.title, file_url: saved.file_url }, ...prev])
       } catch {
-        const filesRes = await fetch(`${API_BASE}/api/v1/files/by-user/${userId}`)
-        if (filesRes.ok) setUserFiles(await filesRes.json())
+        // no index route; keep current list
       }
       setCertificateFile(null)
       setCertProgress(0)
@@ -616,14 +615,10 @@ export default function StudentDashboard() {
                             </div>
                             <Button size="sm" variant="outline" onClick={()=>{
                               const latest = userFiles.find((x)=> x.file_type==='resume')
-                              if (latest) {
-                                if (latest.file_url) {
-                                  const url = `${API_BASE}/api/v1/files/${latest.id}/download`
-                                  const w = window.open(url, '_blank')
-                                  if (!w) { const a=document.createElement('a'); a.href=url; a.target='_blank'; document.body.appendChild(a); a.click(); a.remove() }
-                                } else {
-                                  openFile(latest.id)
-                                }
+                              if (latest && latest.file_url) {
+                                const url = latest.file_url
+                                const w = window.open(url, '_blank')
+                                if (!w) { const a=document.createElement('a'); a.href=url; a.target='_blank'; document.body.appendChild(a); a.click(); a.remove() }
                               } else alert('No resume uploaded yet')
                             }}>View</Button>
                           </div>
@@ -642,14 +637,10 @@ export default function StudentDashboard() {
                             </div>
                             <Button size="sm" variant="outline" onClick={()=>{
                               const latest = userFiles.find((x)=> x.file_type==='certificate')
-                              if (latest) {
-                                if (latest.file_url) {
-                                  const url = `${API_BASE}/api/v1/files/${latest.id}/download`
-                                  const w = window.open(url, '_blank')
-                                  if (!w) { const a=document.createElement('a'); a.href=url; a.target='_blank'; document.body.appendChild(a); a.click(); a.remove() }
-                                } else {
-                                  openFile(latest.id)
-                                }
+                              if (latest && latest.file_url) {
+                                const url = latest.file_url
+                                const w = window.open(url, '_blank')
+                                if (!w) { const a=document.createElement('a'); a.href=url; a.target='_blank'; document.body.appendChild(a); a.click(); a.remove() }
                               } else alert('No certificate uploaded yet')
                             }}>View</Button>
                           </div>
@@ -705,10 +696,10 @@ export default function StudentDashboard() {
                       <div className="space-y-2">
                         {userFiles.map((f)=> (
                           <div key={f.id} className="flex items-center justify-between text-sm">
-                            <span>{f.file_name} <span className="ml-2 text-gray-500">({f.file_type})</span></span>
+                            <span>{f.filename || f.title} <span className="ml-2 text-gray-500">({f.file_type})</span></span>
                             <div className="flex items-center gap-2">
-                              <a href={`${API_BASE}/api/v1/files/${f.id}/download`} target="_blank" rel="noreferrer" className="underline text-maroon">Open</a>
-                              <Button size="sm" variant="outline" onClick={()=> openFile(f.id)}>View</Button>
+                              {f.file_url && <a href={f.file_url} target="_blank" rel="noreferrer" className="underline text-maroon">Open</a>}
+                              {f.file_url && <Button size="sm" variant="outline" onClick={()=> { const w = window.open(f.file_url, '_blank'); if (!w) { const a=document.createElement('a'); a.href=f.file_url; a.target='_blank'; document.body.appendChild(a); a.click(); a.remove() } }}>View</Button>}
                             </div>
                           </div>
                         ))}
