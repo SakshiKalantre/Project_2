@@ -23,15 +23,16 @@ class Settings(BaseSettings):
     UPLOAD_FOLDER: str = "./uploads"
     MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB
 
-    # Cloudinary
-    CLOUDINARY_CLOUD_NAME: str = ""
-    CLOUDINARY_API_KEY: str = ""
-    CLOUDINARY_API_SECRET: str = ""
-    CLOUDINARY_FOLDER: str = "prepsphere"
+    # Cloudflare R2 (S3-compatible)
+    R2_ENDPOINT: str = ""
+    R2_ACCESS_KEY_ID: str = ""
+    R2_SECRET_ACCESS_KEY: str = ""
+    R2_BUCKET_NAME: str = ""
+    R2_PUBLIC_BASE_URL: str = ""  # e.g., https://cdn.example.com or https://<bucket>.<accountid>.r2.cloudflarestorage.com
     
     class Config:
         case_sensitive = True
         env_file = ".env"
-        extra = "ignore"
+        extra = "ignore"  # <-- ADD THIS LINE
 
 settings = Settings()

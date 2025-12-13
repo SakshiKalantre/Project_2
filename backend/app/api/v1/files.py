@@ -10,25 +10,34 @@ from app.models.resume import Resume
 from app.models.certificate import Certificate
 from app.schemas.file import ResumeResponse, ResumeUpdate, CertificateResponse, CertificateUpdate
 from app.core.config import settings
-from app.utils.cloudinary_upload import upload_to_cloudinary
+import boto3
+from urllib.parse import urlparse
 
 router = APIRouter()
 
-# If using Cloudinary, local folder is not required
+def get_s3():
+    if not settings.R2_ENDPOINT or not settings.R2_ACCESS_KEY_ID or not settings.R2_SECRET_ACCESS_KEY or not settings.R2_BUCKET_NAME:
+        raise HTTPException(status_code=500, detail="Object storage not configured")
+    return boto3.client(
+        "s3",
+        endpoint_url=settings.R2_ENDPOINT,
+        aws_access_key_id=settings.R2_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.R2_SECRET_ACCESS_KEY,
+    )
 
-def save_upload_file(upload_file: UploadFile, destination: Path) -> int:
-    bytes_written = 0
+def upload_to_r2(prefix: str, upload_file: UploadFile, user_id: int) -> str:
+    s3 = get_s3()
+    ext = os.path.splitext(upload_file.filename or "")[1]
+    key = f"{prefix}/{user_id}/{uuid.uuid4()}{ext}"
     try:
-        with destination.open("wb") as buffer:
-            while True:
-                chunk = upload_file.file.read(8192)
-                if not chunk:
-                    break
-                buffer.write(chunk)
-                bytes_written += len(chunk)
-        return bytes_written
-    except Exception:
-        return 0
+        upload_file.file.seek(0)
+        s3.upload_fileobj(upload_file.file, settings.R2_BUCKET_NAME, key, ExtraArgs={"ContentType": upload_file.content_type or "application/octet-stream"})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to upload to storage: {e}")
+    if not settings.R2_PUBLIC_BASE_URL:
+        # If no public base URL configured, return S3-style URL
+        return f"{settings.R2_ENDPOINT.rstrip('/')}/{settings.R2_BUCKET_NAME}/{key}"
+    return f"{settings.R2_PUBLIC_BASE_URL.rstrip('/')}/{key}"
 
 @router.post("/resumes", response_model=ResumeResponse)
 async def upload_resume(
@@ -36,23 +45,22 @@ async def upload_resume(
     file: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
-    # Server computes size after write; enforce client-side limits if needed
+    # Server enforces type only; size handled by storage limits
     
     # Validate file type
     allowed_types = ["application/pdf", "image/jpeg", "image/png"]
     if file.content_type not in allowed_types:
         raise HTTPException(status_code=400, detail="Invalid file type")
     
-    # Upload to Cloudinary
-    result = upload_to_cloudinary(file, user_id, "resume")
-    if not result or not result.get("url"):
-        raise HTTPException(status_code=500, detail="Failed to upload to cloud storage")
+    # Generate unique filename
+    # Upload to Cloudflare R2
+    public_url = upload_to_r2("resumes", file, user_id)
     
     # Create resume record
     db_resume = Resume(
         user_id=user_id,
         filename=file.filename,
-        file_url=result["url"],
+        file_url=public_url,
         is_primary=False,
         is_verified=False
     )
@@ -68,24 +76,23 @@ async def upload_certificate(
     file: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
-    # Server computes size after write; enforce client-side limits if needed
+    # Server enforces type only; size handled by storage limits
     
     # Validate file type
     allowed_types = ["application/pdf", "image/jpeg", "image/png"]
     if file.content_type not in allowed_types:
         raise HTTPException(status_code=400, detail="Invalid file type")
     
-    # Upload to Cloudinary
-    result = upload_to_cloudinary(file, user_id, "certificate")
-    if not result or not result.get("url"):
-        raise HTTPException(status_code=500, detail="Failed to upload to cloud storage")
+    # Generate unique filename
+    # Upload to Cloudflare R2
+    public_url = upload_to_r2("certificates", file, user_id)
     
     # Create certificate record
     db_certificate = Certificate(
         user_id=user_id,
         title=title,
         issuer="",
-        file_url=result["url"],
+        file_url=public_url,
         is_verified=False
     )
     db.add(db_certificate)
@@ -120,7 +127,18 @@ def delete_resume(resume_id: int, db: Session = Depends(get_db)):
     if not db_resume:
         raise HTTPException(status_code=404, detail="Resume not found")
     
-    # Remove record only; Cloudinary deletion requires public_id tracking
+    # Delete file from storage
+    try:
+        if hasattr(db_resume, "file_url") and db_resume.file_url:
+            # delete from R2
+            base = settings.R2_PUBLIC_BASE_URL.rstrip('/') if settings.R2_PUBLIC_BASE_URL else f"{settings.R2_ENDPOINT.rstrip('/')}/{settings.R2_BUCKET_NAME}"
+            prefix = base.rstrip('/') + '/'
+            if db_resume.file_url.startswith(prefix):
+                key = db_resume.file_url[len(prefix):]
+                s3 = get_s3()
+                s3.delete_object(Bucket=settings.R2_BUCKET_NAME, Key=key)
+    except Exception:
+        pass  # Log this in a real application
     
     db.delete(db_resume)
     db.commit()
@@ -153,7 +171,17 @@ def delete_certificate(certificate_id: int, db: Session = Depends(get_db)):
     if not db_certificate:
         raise HTTPException(status_code=404, detail="Certificate not found")
     
-    # Remove record only; Cloudinary deletion requires public_id tracking
+    # Delete file from storage
+    try:
+        if hasattr(db_certificate, "file_url") and db_certificate.file_url:
+            base = settings.R2_PUBLIC_BASE_URL.rstrip('/') if settings.R2_PUBLIC_BASE_URL else f"{settings.R2_ENDPOINT.rstrip('/')}/{settings.R2_BUCKET_NAME}"
+            prefix = base.rstrip('/') + '/'
+            if db_certificate.file_url.startswith(prefix):
+                key = db_certificate.file_url[len(prefix):]
+                s3 = get_s3()
+                s3.delete_object(Bucket=settings.R2_BUCKET_NAME, Key=key)
+    except Exception:
+        pass  # Log this in a real application
     
     db.delete(db_certificate)
     db.commit()
