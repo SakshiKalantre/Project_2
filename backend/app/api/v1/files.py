@@ -10,11 +10,11 @@ from app.models.resume import Resume
 from app.models.certificate import Certificate
 from app.schemas.file import ResumeResponse, ResumeUpdate, CertificateResponse, CertificateUpdate
 from app.core.config import settings
+from app.utils.cloudinary_upload import upload_to_cloudinary
 
 router = APIRouter()
 
-# Create upload directory if it doesn't exist
-Path(settings.UPLOAD_FOLDER).mkdir(parents=True, exist_ok=True)
+# If using Cloudinary, local folder is not required
 
 def save_upload_file(upload_file: UploadFile, destination: Path) -> int:
     bytes_written = 0
@@ -43,21 +43,16 @@ async def upload_resume(
     if file.content_type not in allowed_types:
         raise HTTPException(status_code=400, detail="Invalid file type")
     
-    # Generate unique filename
-    file_extension = os.path.splitext(file.filename)[1]
-    unique_filename = f"{uuid.uuid4()}{file_extension}"
-    file_path = Path(settings.UPLOAD_FOLDER) / unique_filename
-    
-    # Save file
-    bytes_written = save_upload_file(file, file_path)
-    if bytes_written == 0:
-        raise HTTPException(status_code=500, detail="Failed to save file")
+    # Upload to Cloudinary
+    result = upload_to_cloudinary(file, user_id, "resume")
+    if not result or not result.get("url"):
+        raise HTTPException(status_code=500, detail="Failed to upload to cloud storage")
     
     # Create resume record
     db_resume = Resume(
         user_id=user_id,
         filename=file.filename,
-        file_url=str(file_path),
+        file_url=result["url"],
         is_primary=False,
         is_verified=False
     )
@@ -80,22 +75,17 @@ async def upload_certificate(
     if file.content_type not in allowed_types:
         raise HTTPException(status_code=400, detail="Invalid file type")
     
-    # Generate unique filename
-    file_extension = os.path.splitext(file.filename)[1]
-    unique_filename = f"{uuid.uuid4()}{file_extension}"
-    file_path = Path(settings.UPLOAD_FOLDER) / unique_filename
-    
-    # Save file
-    bytes_written = save_upload_file(file, file_path)
-    if bytes_written == 0:
-        raise HTTPException(status_code=500, detail="Failed to save file")
+    # Upload to Cloudinary
+    result = upload_to_cloudinary(file, user_id, "certificate")
+    if not result or not result.get("url"):
+        raise HTTPException(status_code=500, detail="Failed to upload to cloud storage")
     
     # Create certificate record
     db_certificate = Certificate(
         user_id=user_id,
         title=title,
         issuer="",
-        file_url=str(file_path),
+        file_url=result["url"],
         is_verified=False
     )
     db.add(db_certificate)
@@ -130,12 +120,7 @@ def delete_resume(resume_id: int, db: Session = Depends(get_db)):
     if not db_resume:
         raise HTTPException(status_code=404, detail="Resume not found")
     
-    # Delete file from storage
-    try:
-        if hasattr(db_resume, "file_url") and db_resume.file_url:
-            os.remove(db_resume.file_url)
-    except Exception:
-        pass  # Log this in a real application
+    # Remove record only; Cloudinary deletion requires public_id tracking
     
     db.delete(db_resume)
     db.commit()
@@ -168,12 +153,7 @@ def delete_certificate(certificate_id: int, db: Session = Depends(get_db)):
     if not db_certificate:
         raise HTTPException(status_code=404, detail="Certificate not found")
     
-    # Delete file from storage
-    try:
-        if hasattr(db_certificate, "file_url") and db_certificate.file_url:
-            os.remove(db_certificate.file_url)
-    except Exception:
-        pass  # Log this in a real application
+    # Remove record only; Cloudinary deletion requires public_id tracking
     
     db.delete(db_certificate)
     db.commit()

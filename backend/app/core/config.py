@@ -22,10 +22,16 @@ class Settings(BaseSettings):
     # File upload
     UPLOAD_FOLDER: str = "./uploads"
     MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB
+
+    # Cloudinary
+    CLOUDINARY_CLOUD_NAME: str = ""
+    CLOUDINARY_API_KEY: str = ""
+    CLOUDINARY_API_SECRET: str = ""
+    CLOUDINARY_FOLDER: str = "prepsphere"
     
     class Config:
         case_sensitive = True
         env_file = ".env"
-        extra = "ignore"  # <-- ADD THIS LINE
+        extra = "ignore"
 
 settings = Settings()
