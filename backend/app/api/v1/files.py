@@ -186,3 +186,52 @@ def delete_certificate(certificate_id: int, db: Session = Depends(get_db)):
     db.delete(db_certificate)
     db.commit()
     return {"message": "Certificate deleted successfully"}
+
+def _key_from_url(file_url: str) -> str:
+    base = settings.R2_PUBLIC_BASE_URL.rstrip('/') if settings.R2_PUBLIC_BASE_URL else f"{settings.R2_ENDPOINT.rstrip('/')}/{settings.R2_BUCKET_NAME}"
+    prefix = base.rstrip('/') + '/'
+    if file_url.startswith(prefix):
+        return file_url[len(prefix):]
+    # attempt to parse endpoint/bucket style
+    parsed = urlparse(file_url)
+    return parsed.path.lstrip('/').split('/', 1)[1] if settings.R2_PUBLIC_BASE_URL == '' else parsed.path.lstrip('/')
+
+@router.get("/{file_id}")
+def get_file_info(file_id: int, db: Session = Depends(get_db)):
+    resume = db.query(Resume).filter(Resume.id == file_id).first()
+    if resume:
+        return {"id": resume.id, "file_type": "resume", "filename": resume.filename, "file_url": resume.file_url}
+    cert = db.query(Certificate).filter(Certificate.id == file_id).first()
+    if cert:
+        return {"id": cert.id, "file_type": "certificate", "title": cert.title, "file_url": cert.file_url}
+    raise HTTPException(status_code=404, detail="File not found")
+
+@router.get("/{file_id}/presigned")
+def get_presigned(file_id: int, db: Session = Depends(get_db)):
+    resume = db.query(Resume).filter(Resume.id == file_id).first()
+    target_url = resume.file_url if resume else None
+    if not target_url:
+        cert = db.query(Certificate).filter(Certificate.id == file_id).first()
+        target_url = cert.file_url if cert else None
+    if not target_url:
+        raise HTTPException(status_code=404, detail="File not found")
+    key = _key_from_url(target_url)
+    s3 = get_s3()
+    try:
+        url = s3.generate_presigned_url('get_object', Params={'Bucket': settings.R2_BUCKET_NAME, 'Key': key}, ExpiresIn=300)
+        return {"url": url}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate presigned URL: {e}")
+
+@router.get("/by-user/{user_id}")
+def list_files_by_user(user_id: int, db: Session = Depends(get_db)):
+    resumes = db.query(Resume).filter(Resume.user_id == user_id).all()
+    certs = db.query(Certificate).filter(Certificate.user_id == user_id).all()
+    out: List[dict] = []
+    for r in resumes:
+        out.append({"id": r.id, "file_type": "resume", "filename": r.filename, "file_url": r.file_url})
+    for c in certs:
+        out.append({"id": c.id, "file_type": "certificate", "title": c.title, "file_url": c.file_url})
+    # newest first
+    out.sort(key=lambda x: x.get('uploaded_at', 0), reverse=True)
+    return out
