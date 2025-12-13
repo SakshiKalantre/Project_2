@@ -2,50 +2,41 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 
-class ResumeBase(BaseModel):
-    user_id: int
-    file_name: str
-    file_path: str
-    file_size: int
-    mime_type: str
-
-class ResumeCreate(ResumeBase):
-    pass
-
 class ResumeUpdate(BaseModel):
-    is_approved: Optional[bool] = None
+    is_primary: Optional[bool] = None
+    is_verified: Optional[bool] = None
 
-class ResumeResponse(ResumeBase):
+class ResumeResponse(BaseModel):
     id: int
-    is_approved: bool
+    user_id: int
+    filename: str
+    file_url: str
+    is_primary: bool
+    is_verified: bool
     uploaded_at: datetime
     
     class Config:
         from_attributes = True
 
-class CertificateBase(BaseModel):
-    user_id: int
-    file_name: str
-    file_path: str
-    file_size: int
-    mime_type: str
-    title: str
-    issued_by: Optional[str] = None
-
-class CertificateCreate(CertificateBase):
-    issued_date: Optional[datetime] = None
-    expiry_date: Optional[datetime] = None
-
 class CertificateUpdate(BaseModel):
     title: Optional[str] = None
-    issued_by: Optional[str] = None
-    issued_date: Optional[datetime] = None
+    issuer: Optional[str] = None
+    issue_date: Optional[datetime] = None
     expiry_date: Optional[datetime] = None
+    credential_url: Optional[str] = None
+    description: Optional[str] = None
 
-class CertificateResponse(CertificateBase):
+class CertificateResponse(BaseModel):
     id: int
-    issued_date: Optional[datetime] = None
+    user_id: int
+    title: str
+    issuer: str
+    issue_date: Optional[datetime] = None
     expiry_date: Optional[datetime] = None
+    credential_url: Optional[str] = None
+    description: Optional[str] = None
+    file_url: Optional[str] = None
+    is_verified: bool
     uploaded_at: datetime
     
     class Config:
