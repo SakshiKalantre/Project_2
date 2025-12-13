@@ -109,3 +109,26 @@ def update_user_profile(user_id: int, profile_update: ProfileUpdate, db: Session
     db.commit()
     db.refresh(db_profile)
     return db_profile
+@router.get("/by-email/{email}", response_model=UserResponse)
+def get_user_by_email(email: str, db: Session = Depends(get_db)):
+    db_user = db.query(User).filter(User.email == email).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return db_user
+
+@router.post("/register", response_model=UserResponse)
+def register_user(user: UserCreate, db: Session = Depends(get_db)):
+    existing = db.query(User).filter((User.email == user.email) | (User.clerk_user_id == user.clerk_user_id)).first()
+    if existing:
+        return existing
+    db_user = User(
+        clerk_user_id=user.clerk_user_id,
+        email=user.email,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        role=user.role
+    )
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user

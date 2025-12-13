@@ -4,9 +4,9 @@ from datetime import datetime
 from enum import Enum
 
 class UserRole(str, Enum):
-    STUDENT = "student"
-    TPO = "tpo"
-    ADMIN = "admin"
+    STUDENT = "STUDENT"
+    TPO = "TPO"
+    ADMIN = "ADMIN"
 
 class UserBase(BaseModel):
     email: EmailStr

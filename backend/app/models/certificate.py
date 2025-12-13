@@ -10,7 +10,7 @@ class Certificate(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     title = Column(String, nullable=False)  # Certificate name
     issuer = Column(String, nullable=False)  # Organization that issued
-    issue_date = Column(DateTime(timezone=True), nullable=False)
+    issue_date = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     expiry_date = Column(DateTime(timezone=True), nullable=True)
     credential_url = Column(String, nullable=True)  # Link to certificate
     description = Column(Text, nullable=True)

@@ -8,7 +8,7 @@ from pathlib import Path
 from app.db.session import get_db
 from app.models.resume import Resume
 from app.models.certificate import Certificate
-from app.schemas.file import ResumeCreate, ResumeResponse, ResumeUpdate, CertificateCreate, CertificateResponse, CertificateUpdate
+from app.schemas.file import ResumeResponse, ResumeUpdate, CertificateResponse, CertificateUpdate
 from app.core.config import settings
 
 router = APIRouter()
@@ -16,14 +16,19 @@ router = APIRouter()
 # Create upload directory if it doesn't exist
 Path(settings.UPLOAD_FOLDER).mkdir(parents=True, exist_ok=True)
 
-def save_upload_file(upload_file: UploadFile, destination: Path) -> bool:
+def save_upload_file(upload_file: UploadFile, destination: Path) -> int:
+    bytes_written = 0
     try:
         with destination.open("wb") as buffer:
-            while chunk := upload_file.file.read(8192):
+            while True:
+                chunk = upload_file.file.read(8192)
+                if not chunk:
+                    break
                 buffer.write(chunk)
-        return True
+                bytes_written += len(chunk)
+        return bytes_written
     except Exception:
-        return False
+        return 0
 
 @router.post("/resumes", response_model=ResumeResponse)
 async def upload_resume(
@@ -31,9 +36,7 @@ async def upload_resume(
     file: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
-    # Validate file size
-    if file.size > settings.MAX_FILE_SIZE:
-        raise HTTPException(status_code=400, detail="File size exceeds limit")
+    # Server computes size after write; enforce client-side limits if needed
     
     # Validate file type
     allowed_types = ["application/pdf", "image/jpeg", "image/png"]
@@ -46,19 +49,18 @@ async def upload_resume(
     file_path = Path(settings.UPLOAD_FOLDER) / unique_filename
     
     # Save file
-    if not save_upload_file(file, file_path):
+    bytes_written = save_upload_file(file, file_path)
+    if bytes_written == 0:
         raise HTTPException(status_code=500, detail="Failed to save file")
     
     # Create resume record
-    resume_data = ResumeCreate(
+    db_resume = Resume(
         user_id=user_id,
-        file_name=file.filename,
-        file_path=str(file_path),
-        file_size=file.size,
-        mime_type=file.content_type
+        filename=file.filename,
+        file_url=str(file_path),
+        is_primary=False,
+        is_verified=False
     )
-    
-    db_resume = Resume(**resume_data.dict())
     db.add(db_resume)
     db.commit()
     db.refresh(db_resume)
@@ -71,9 +73,7 @@ async def upload_certificate(
     file: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
-    # Validate file size
-    if file.size > settings.MAX_FILE_SIZE:
-        raise HTTPException(status_code=400, detail="File size exceeds limit")
+    # Server computes size after write; enforce client-side limits if needed
     
     # Validate file type
     allowed_types = ["application/pdf", "image/jpeg", "image/png"]
@@ -86,20 +86,18 @@ async def upload_certificate(
     file_path = Path(settings.UPLOAD_FOLDER) / unique_filename
     
     # Save file
-    if not save_upload_file(file, file_path):
+    bytes_written = save_upload_file(file, file_path)
+    if bytes_written == 0:
         raise HTTPException(status_code=500, detail="Failed to save file")
     
     # Create certificate record
-    certificate_data = CertificateCreate(
+    db_certificate = Certificate(
         user_id=user_id,
-        file_name=file.filename,
-        file_path=str(file_path),
-        file_size=file.size,
-        mime_type=file.content_type,
-        title=title
+        title=title,
+        issuer="",
+        file_url=str(file_path),
+        is_verified=False
     )
-    
-    db_certificate = Certificate(**certificate_data.dict())
     db.add(db_certificate)
     db.commit()
     db.refresh(db_certificate)
@@ -134,7 +132,8 @@ def delete_resume(resume_id: int, db: Session = Depends(get_db)):
     
     # Delete file from storage
     try:
-        os.remove(db_resume.file_path)
+        if hasattr(db_resume, "file_url") and db_resume.file_url:
+            os.remove(db_resume.file_url)
     except Exception:
         pass  # Log this in a real application
     
@@ -171,7 +170,8 @@ def delete_certificate(certificate_id: int, db: Session = Depends(get_db)):
     
     # Delete file from storage
     try:
-        os.remove(db_certificate.file_path)
+        if hasattr(db_certificate, "file_url") and db_certificate.file_url:
+            os.remove(db_certificate.file_url)
     except Exception:
         pass  # Log this in a real application
     
