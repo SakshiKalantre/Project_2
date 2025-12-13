@@ -15,6 +15,7 @@ declare global {
 export default function SignInPage() {
   const router = useRouter();
   const { isLoaded, signIn } = useSignIn();
+  const SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '';
   const [role, setRole] = useState("");
   const [secretPassword, setSecretPassword] = useState("");
   const [email, setEmail] = useState("");
@@ -28,27 +29,27 @@ export default function SignInPage() {
   const [recaptchaError, setRecaptchaError] = useState("");
 
   useEffect(() => {
-    // Load reCAPTCHA script
     const script = document.createElement("script");
-    script.src = "https://www.google.com/recaptcha/api.js";
+    script.src = "https://www.google.com/recaptcha/api.js?render=explicit";
     script.async = true;
     script.defer = true;
-    document.body.appendChild(script);
-  }, []);
-
-  useEffect(() => {
-    // Initialize reCAPTCHA when it's available
-    if (window.grecaptcha && document.getElementById("recaptcha-container")) {
-      const container = document.getElementById("recaptcha-container");
-      // Clear any existing reCAPTCHA before rendering
-      if (container && container.innerHTML === "") {
-        window.grecaptcha.render("recaptcha-container", {
-          sitekey: "6LfpQR8sAAAAAAobkCurmWSGgJQE9yMCcR08OwpE",
-          callback: onRecaptchaChange,
+    script.onload = () => {
+      if (window.grecaptcha && SITE_KEY) {
+        window.grecaptcha.ready(() => {
+          const container = document.getElementById("recaptcha-container");
+          if (container && container.innerHTML === "") {
+            window.grecaptcha.render("recaptcha-container", {
+              sitekey: SITE_KEY,
+              callback: onRecaptchaChange,
+            });
+          }
         });
       }
-    }
-  }, []);
+    };
+    document.body.appendChild(script);
+  }, [SITE_KEY]);
+
+  useEffect(() => {}, []);
 
   const onRecaptchaChange = (token: string) => {
     setRecaptchaToken(token);
@@ -81,20 +82,22 @@ export default function SignInPage() {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateSignIn()) {
-      // Store login data in localStorage for demo
-      const loginData = {
-        email,
-        role,
-        rememberMe,
-        secretPassword: role !== "STUDENT" ? secretPassword : undefined,
-      };
-      localStorage.setItem("currentUser", JSON.stringify(loginData));
-      if (rememberMe) {
-        localStorage.setItem("rememberedEmail", email);
+    if (!validateSignIn()) return;
+    try {
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const userRes = await fetch(`${API_BASE}/api/v1/users/by-email/${encodeURIComponent(email)}`)
+      if (!userRes.ok) {
+        setErrors({ submit: 'No account found for this email. Please sign up first.' });
+        return;
       }
-      // Redirect based on role
+      const u = await userRes.json();
+      // Store login data in localStorage for demo
+      const loginData = { email, role, rememberMe, secretPassword: role !== "STUDENT" ? secretPassword : undefined };
+      localStorage.setItem("currentUser", JSON.stringify(loginData));
+      if (rememberMe) localStorage.setItem("rememberedEmail", email);
       router.push(`/dashboard/${role.toLowerCase()}`);
+    } catch {
+      setErrors({ submit: 'Sign in failed. Please try again.' })
     }
   };
 
@@ -366,6 +369,11 @@ export default function SignInPage() {
                 <p className="text-red-500 text-xs mt-2 text-center">{recaptchaError}</p>
               )}
             </div>
+            {errors.submit && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-red-600 text-sm">{errors.submit}</p>
+              </div>
+            )}
               <Button
                 type="submit"
                 className="w-full bg-maroon hover:bg-maroon/90 text-white font-semibold py-3 rounded-lg mt-6"

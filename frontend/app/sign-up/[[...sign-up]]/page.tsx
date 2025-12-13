@@ -14,6 +14,7 @@ declare global {
 export default function SignUpPage() {
   const router = useRouter();
   const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+  const SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '';
   
   const [role, setRole] = useState("");
   const [secretPassword, setSecretPassword] = useState("");
@@ -31,26 +32,27 @@ export default function SignUpPage() {
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
 
   useEffect(() => {
-    // Load reCAPTCHA script
     const script = document.createElement("script");
-    script.src = "https://www.google.com/recaptcha/api.js";
+    script.src = "https://www.google.com/recaptcha/api.js?render=explicit";
     script.async = true;
     script.defer = true;
-    document.body.appendChild(script);
-  }, []);
-
-  useEffect(() => {
-    // Initialize reCAPTCHA when it's available
-    if (window.grecaptcha && document.getElementById("recaptcha-container-signup")) {
-      const container = document.getElementById("recaptcha-container-signup");
-      if (container && container.innerHTML === "") {
-        window.grecaptcha.render("recaptcha-container-signup", {
-          sitekey: "6LfpQR8sAAAAAAobkCurmWSGgJQE9yMCcR08OwpE",
-          callback: onRecaptchaChange,
+    script.onload = () => {
+      if (window.grecaptcha && SITE_KEY) {
+        window.grecaptcha.ready(() => {
+          const container = document.getElementById("recaptcha-container-signup");
+          if (container && container.innerHTML === "") {
+            window.grecaptcha.render("recaptcha-container-signup", {
+              sitekey: SITE_KEY,
+              callback: onRecaptchaChange,
+            });
+          }
         });
       }
-    }
-  }, []);
+    };
+    document.body.appendChild(script);
+  }, [SITE_KEY]);
+
+  useEffect(() => {}, []);
 
   const onRecaptchaChange = (token: string) => {
     setRecaptchaToken(token);
@@ -106,16 +108,24 @@ export default function SignUpPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: formData.email,
-          firstName: formData.fullName.split(" ")[0],
-          lastName: formData.fullName.split(" ").slice(1).join(" ") || "",
+          first_name: formData.fullName.split(" ")[0],
+          last_name: formData.fullName.split(" ").slice(1).join(" ") || "",
           role: role.toUpperCase(),
-          phoneNumber: formData.phoneNumber,
-          clerkUserId: `local_${Date.now()}`,
+          clerk_user_id: `local_${Date.now()}`,
         }),
       });
       if (!res.ok) {
         const msg = await res.text();
         throw new Error(msg || "Registration failed");
+      }
+      const created = await res.json();
+      // Save basic profile phone number
+      if (created?.id && formData.phoneNumber) {
+        await fetch(`${API_BASE}/api/v1/users/${created.id}/profile`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: formData.phoneNumber })
+        });
       }
       setRegistrationSuccess(true);
       localStorage.setItem("pendingUser", JSON.stringify({ email: formData.email, role }));
