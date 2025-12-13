@@ -1,4 +1,5 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
+from pydantic.config import ConfigDict
 from typing import Optional, List
 from datetime import datetime
 from enum import Enum
@@ -9,13 +10,14 @@ class UserRole(str, Enum):
     ADMIN = "ADMIN"
 
 class UserBase(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
     email: EmailStr
-    first_name: str
-    last_name: str
+    first_name: str = Field(alias="firstName")
+    last_name: str = Field(alias="lastName")
     role: UserRole = UserRole.STUDENT
 
 class UserCreate(UserBase):
-    clerk_user_id: str
+    clerk_user_id: str = Field(alias="clerkUserId")
 
 class UserUpdate(BaseModel):
     first_name: Optional[str] = None
