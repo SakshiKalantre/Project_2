@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Response
+from sqlalchemy import text
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
@@ -6,13 +7,32 @@ from app.api.v1 import users, jobs, events, files, notifications
 from app.core.config import settings
 from app.db.session import engine, Base
 
-# Create tables
+def ensure_db_types():
+    with engine.connect() as conn:
+        conn.execute(text(
+            """
+            DO $$
+            BEGIN
+              IF NOT EXISTS (
+                SELECT 1
+                FROM pg_type t
+                JOIN pg_namespace n ON n.oid = t.typnamespace
+                WHERE t.typname = 'userrole'
+              ) THEN
+                CREATE TYPE userrole AS ENUM ('STUDENT','TPO','ADMIN');
+              END IF;
+            END
+            $$;
+            """
+        ))
+
 def create_tables():
     Base.metadata.create_all(bind=engine)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
+    ensure_db_types()
     create_tables()
     yield
     # Shutdown
