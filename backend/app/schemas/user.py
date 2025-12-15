@@ -43,7 +43,7 @@ class ProfileBase(BaseModel):
     about: Optional[str] = None
 
 class ProfileCreate(ProfileBase):
-    user_id: int
+    pass
 
 class ProfileUpdate(ProfileBase):
     is_approved: Optional[bool] = None

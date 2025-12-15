@@ -92,7 +92,7 @@ def create_user_profile(user_id: int, profile: ProfileCreate, db: Session = Depe
         raise HTTPException(status_code=400, detail="Profile already exists")
     
     # Create new profile
-    db_profile = Profile(**profile.dict())
+    db_profile = Profile(user_id=user_id, **profile.dict())
     db.add(db_profile)
     db.commit()
     db.refresh(db_profile)
