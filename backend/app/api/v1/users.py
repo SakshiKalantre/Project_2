@@ -127,18 +127,18 @@ def get_user_by_email(email: str, db: Session = Depends(get_db)):
 
 @router.post("/register", response_model=UserResponse)
 def register_user(user: UserCreate, db: Session = Depends(get_db)):
-    existing = db.query(User).filter((User.email == user.email) | (User.clerk_user_id == user.clerk_user_id)).first()
-    if existing:
-        return existing
-    db_user = User(
-        clerk_user_id=user.clerk_user_id,
-        email=user.email,
-        first_name=user.first_name,
-        last_name=user.last_name,
-        role=user.role,
-        phone_number=getattr(user, 'phone_number', None)
-    )
     try:
+        existing = db.query(User).filter((User.email == user.email) | (User.clerk_user_id == user.clerk_user_id)).first()
+        if existing:
+            return existing
+        db_user = User(
+            clerk_user_id=user.clerk_user_id,
+            email=user.email,
+            first_name=user.first_name,
+            last_name=user.last_name,
+            role=user.role,
+            phone_number=getattr(user, 'phone_number', None)
+        )
         db.add(db_user)
         db.commit()
         db.refresh(db_user)
@@ -149,3 +149,6 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {e}")
