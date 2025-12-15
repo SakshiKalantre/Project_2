@@ -72,3 +72,12 @@ async def root_head():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
+@app.get("/db/ping")
+async def db_ping():
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return {"db": "ok"}
+    except Exception as e:
+        return Response(content=str(e), status_code=500)
