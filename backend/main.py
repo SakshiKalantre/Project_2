@@ -21,6 +21,28 @@ def ensure_db_types():
               ) THEN
                 CREATE TYPE userrole AS ENUM ('STUDENT','TPO','ADMIN');
               END IF;
+              -- Ensure required enum labels exist
+              IF NOT EXISTS (
+                SELECT 1 FROM pg_enum e
+                JOIN pg_type t ON t.oid = e.enumtypid
+                WHERE t.typname = 'userrole' AND e.enumlabel = 'STUDENT'
+              ) THEN
+                ALTER TYPE userrole ADD VALUE 'STUDENT';
+              END IF;
+              IF NOT EXISTS (
+                SELECT 1 FROM pg_enum e
+                JOIN pg_type t ON t.oid = e.enumtypid
+                WHERE t.typname = 'userrole' AND e.enumlabel = 'TPO'
+              ) THEN
+                ALTER TYPE userrole ADD VALUE 'TPO';
+              END IF;
+              IF NOT EXISTS (
+                SELECT 1 FROM pg_enum e
+                JOIN pg_type t ON t.oid = e.enumtypid
+                WHERE t.typname = 'userrole' AND e.enumlabel = 'ADMIN'
+              ) THEN
+                ALTER TYPE userrole ADD VALUE 'ADMIN';
+              END IF;
             END
             $$;
             """
