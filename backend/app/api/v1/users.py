@@ -23,7 +23,8 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
         email=user.email,
         first_name=user.first_name,
         last_name=user.last_name,
-        role=user.role
+        role=user.role,
+        phone_number=getattr(user, 'phone_number', None)
     )
     try:
         db.add(db_user)
@@ -134,7 +135,8 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
         email=user.email,
         first_name=user.first_name,
         last_name=user.last_name,
-        role=user.role
+        role=user.role,
+        phone_number=getattr(user, 'phone_number', None)
     )
     try:
         db.add(db_user)

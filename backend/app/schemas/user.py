@@ -10,11 +10,12 @@ class UserRole(str, Enum):
     ADMIN = "ADMIN"
 
 class UserBase(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, extra='ignore')
+    model_config = ConfigDict(populate_by_name=True, extra='allow')
     email: EmailStr
     first_name: str = Field(alias="firstName")
     last_name: str = Field(alias="lastName")
     role: UserRole = UserRole.STUDENT
+    phone_number: Optional[str] = Field(default=None, alias="phoneNumber")
 
 class UserCreate(UserBase):
     clerk_user_id: str = Field(alias="clerkUserId")
