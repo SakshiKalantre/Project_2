@@ -104,7 +104,7 @@ export default function StudentDashboard() {
           setUserId(userData.id)
           setProfile(prev => ({
             ...prev,
-            name: displayName || `${userData.first_name} ${userData.last_name}`,
+            name: (`${userData.first_name || ''} ${userData.last_name || ''}`.trim()) || displayName || (userData.email?.split('@')[0] || ''),
             email: userData.email,
           }))
           const profileDetailsResponse = await fetch(`${API_BASE}/api/v1/users/${userData.id}/profile`)
@@ -407,7 +407,7 @@ export default function StudentDashboard() {
           </div>
           
           <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-600">Welcome, {profile.name ? profile.name.split(' ')[0] : 'Student'}</span>
+            <span className="text-sm text-gray-600">Welcome, {(profile.name?.trim()?.split(' ')[0]) || (profile.email?.split('@')[0]) || 'Student'}</span>
             <div className="bg-gray-200 border-2 border-dashed rounded-xl w-10 h-10" />
             <LogoutButton />
           </div>
