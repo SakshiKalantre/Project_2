@@ -103,7 +103,7 @@ export default function SignUpPage() {
     if (!validateForm()) return;
     setIsLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/v1/users/register`, {
+      const res = await fetch(`/api/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -121,10 +121,10 @@ export default function SignUpPage() {
       const created = await res.json();
       // Save basic profile phone number
       if (created?.id && formData.phoneNumber) {
-        await fetch(`${API_BASE}/api/v1/users/${created.id}/profile`, {
+        await fetch(`/api/users/profile`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: formData.phoneNumber })
+          body: JSON.stringify({ user_id: created.id, phone: formData.phoneNumber })
         });
       }
       setRegistrationSuccess(true);
