@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from app.db.session import get_db
 from app.models.user import User, Profile
@@ -24,10 +25,17 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
         last_name=user.last_name,
         role=user.role
     )
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    return db_user
+    try:
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+        return db_user
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="User with same email or clerk_user_id already exists")
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/{user_id}", response_model=UserResponse)
 def get_user(user_id: int, db: Session = Depends(get_db)):
@@ -128,7 +136,14 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
         last_name=user.last_name,
         role=user.role
     )
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    return db_user
+    try:
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+        return db_user
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="User with same email or clerk_user_id already exists")
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
