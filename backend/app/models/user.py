@@ -4,6 +4,8 @@ from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.db.session import Base
 from enum import Enum as PyEnum
+from app.models.resume import Resume
+from app.models.certificate import Certificate
 
 class UserRole(str, PyEnum):
     STUDENT = "STUDENT"
@@ -28,8 +30,8 @@ class User(Base):
     
     # Relationships
     profile = relationship("Profile", back_populates="user", uselist=False, cascade="all, delete-orphan")
-    resumes = relationship("Resume", back_populates="user", cascade="all, delete-orphan")
-    certificates = relationship("Certificate", back_populates="user", cascade="all, delete-orphan")
+    resumes = relationship("Resume", back_populates="user", cascade="all, delete-orphan", foreign_keys=[Resume.user_id])
+    certificates = relationship("Certificate", back_populates="user", cascade="all, delete-orphan", foreign_keys=[Certificate.user_id])
     applications = relationship("JobApplication", back_populates="user", cascade="all, delete-orphan")
     notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
 
