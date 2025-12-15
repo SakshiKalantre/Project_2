@@ -10,7 +10,7 @@ class UserRole(str, Enum):
     ADMIN = "ADMIN"
 
 class UserBase(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True, extra='ignore')
     email: EmailStr
     first_name: str = Field(alias="firstName")
     last_name: str = Field(alias="lastName")
