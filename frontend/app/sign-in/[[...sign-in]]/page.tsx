@@ -84,7 +84,7 @@ export default function SignInPage() {
     e.preventDefault();
     if (!validateSignIn()) return;
     try {
-      const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://project-2-payz.onrender.com';
       const userRes = await fetch(`${API_BASE}/api/v1/users/by-email/${encodeURIComponent(email)}`)
       if (!userRes.ok) {
         setErrors({ submit: 'No account found for this email. Please sign up first.' });

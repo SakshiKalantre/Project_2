@@ -13,7 +13,7 @@ declare global {
 
 export default function SignUpPage() {
   const router = useRouter();
-  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://project-2-payz.onrender.com';
   const SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '';
   
   const [role, setRole] = useState("");
