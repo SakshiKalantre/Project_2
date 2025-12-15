@@ -86,12 +86,15 @@ def create_user_profile(user_id: int, profile: ProfileCreate, db: Session = Depe
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Check if profile already exists
+    # Upsert profile: update if exists, else create
     db_profile = db.query(Profile).filter(Profile.user_id == user_id).first()
     if db_profile:
-        raise HTTPException(status_code=400, detail="Profile already exists")
-    
-    # Create new profile
+        update_data = profile.dict(exclude_unset=True)
+        for key, value in update_data.items():
+            setattr(db_profile, key, value)
+        db.commit()
+        db.refresh(db_profile)
+        return db_profile
     db_profile = Profile(user_id=user_id, **profile.dict())
     db.add(db_profile)
     db.commit()
