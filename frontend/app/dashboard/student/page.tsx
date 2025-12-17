@@ -242,6 +242,12 @@ export default function StudentDashboard() {
   const handleSaveProfile = async () => {
     try {
       if (!userId) return
+      const cleanName = (profile.name || '').trim().replace(/\s+/g, ' ')
+      if (!cleanName) { setIsEditing(false); return }
+      const parts = cleanName.split(' ')
+      const firstName = parts[0] || ''
+      const lastName = parts.slice(1).join(' ')
+
       await fetch(`${API_BASE}/api/v1/users/${userId}/profile`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -254,14 +260,17 @@ export default function StudentDashboard() {
           alternate_email: profile.alternateEmail || null
         })
       })
-      // Also update name in users table if changed
-      const [firstName, ...rest] = (profile.name || '').split(' ')
-      const lastName = rest.join(' ')
       await fetch(`${API_BASE}/api/v1/users/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ first_name: firstName || null, last_name: lastName || null })
       })
+      const refreshed = await fetch(`${API_BASE}/api/v1/users/${userId}`)
+      if (refreshed.ok) {
+        const u = await refreshed.json()
+        const finalName = (`${u.first_name || ''} ${u.last_name || ''}`.trim()) || (u.email?.split('@')[0] || '')
+        setProfile(prev => ({ ...prev, name: finalName, email: u.email }))
+      }
       setIsEditing(false)
     } catch (e) {
       setIsEditing(false)
