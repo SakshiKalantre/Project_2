@@ -206,8 +206,13 @@ def _exists_in_r2(file_url: str) -> bool:
         key = _key_from_url(file_url)
         s3.head_object(Bucket=settings.R2_BUCKET_NAME, Key=key)
         return True
-    except ClientError:
-        return False
+    except ClientError as e:
+        try:
+            code = e.response.get('Error', {}).get('Code')
+            # Only treat NotFound as missing; for auth or other errors, assume present
+            return code != 'NotFound' and code != '404'
+        except Exception:
+            return True
     except Exception:
         return False
 
@@ -244,12 +249,18 @@ def list_files_by_user(user_id: int, db: Session = Depends(get_db)):
     certs = db.query(Certificate).filter(Certificate.user_id == user_id).all()
     out: List[dict] = []
     for r in resumes:
-        if r.file_url and _exists_in_r2(r.file_url):
+        if not r.file_url:
+            continue
+        exists = _exists_in_r2(r.file_url)
+        if exists:
             out.append({"id": r.id, "file_type": "resume", "filename": r.filename, "file_url": r.file_url})
         else:
             db.delete(r)
     for c in certs:
-        if c.file_url and _exists_in_r2(c.file_url):
+        if not c.file_url:
+            continue
+        exists = _exists_in_r2(c.file_url)
+        if exists:
             out.append({"id": c.id, "file_type": "certificate", "title": c.title, "file_url": c.file_url})
         else:
             db.delete(c)
