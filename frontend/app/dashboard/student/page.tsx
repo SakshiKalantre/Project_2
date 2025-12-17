@@ -103,7 +103,7 @@ export default function StudentDashboard() {
           setUserId(userData.id)
           setProfile(prev => ({
             ...prev,
-            name: (`${userData.first_name || ''} ${userData.last_name || ''}`.trim()) || displayName,
+            name: (`${userData.first_name || ''} ${userData.last_name || ''}`.trim()),
             email: userData.email,
           }))
           const profileDetailsResponse = await fetch(`${API_BASE}/api/v1/users/${userData.id}/profile`, { cache: 'no-store' })
@@ -147,7 +147,7 @@ export default function StudentDashboard() {
             const userData = await userRes.json()
             uidLocal = userData.id
             setUserId(userData.id)
-            setProfile(prev => ({ ...prev, name: displayName || `${userData.first_name} ${userData.last_name}`, email: userData.email }))
+            setProfile(prev => ({ ...prev, name: (`${userData.first_name || ''} ${userData.last_name || ''}`.trim()), email: userData.email }))
           }
         }
 
