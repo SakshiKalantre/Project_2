@@ -11,6 +11,7 @@ from app.models.certificate import Certificate
 from app.schemas.file import ResumeResponse, ResumeUpdate, CertificateResponse, CertificateUpdate
 from app.core.config import settings
 import boto3
+from botocore.config import Config
 from urllib.parse import urlparse
 
 router = APIRouter()
@@ -21,8 +22,10 @@ def get_s3():
     return boto3.client(
         "s3",
         endpoint_url=settings.R2_ENDPOINT,
+        region_name="auto",
         aws_access_key_id=settings.R2_ACCESS_KEY_ID,
         aws_secret_access_key=settings.R2_SECRET_ACCESS_KEY,
+        config=Config(signature_version="s3v4")
     )
 
 def upload_to_r2(prefix: str, upload_file: UploadFile, user_id: int) -> str:
@@ -188,13 +191,13 @@ def delete_certificate(certificate_id: int, db: Session = Depends(get_db)):
     return {"message": "Certificate deleted successfully"}
 
 def _key_from_url(file_url: str) -> str:
-    base = settings.R2_PUBLIC_BASE_URL.rstrip('/') if settings.R2_PUBLIC_BASE_URL else f"{settings.R2_ENDPOINT.rstrip('/')}/{settings.R2_BUCKET_NAME}"
-    prefix = base.rstrip('/') + '/'
-    if file_url.startswith(prefix):
-        return file_url[len(prefix):]
-    # attempt to parse endpoint/bucket style
     parsed = urlparse(file_url)
-    return parsed.path.lstrip('/').split('/', 1)[1] if settings.R2_PUBLIC_BASE_URL == '' else parsed.path.lstrip('/')
+    # Paths can be /bucket/key or just /key depending on base URL used
+    path = parsed.path.lstrip('/')
+    parts = path.split('/')
+    if parts and parts[0] == settings.R2_BUCKET_NAME and len(parts) > 1:
+        return '/'.join(parts[1:])
+    return path
 
 @router.get("/{file_id}")
 def get_file_info(file_id: int, db: Session = Depends(get_db)):

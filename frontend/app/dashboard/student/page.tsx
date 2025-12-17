@@ -615,10 +615,8 @@ export default function StudentDashboard() {
                             </div>
                             <Button size="sm" variant="outline" onClick={()=>{
                               const latest = userFiles.find((x)=> x.file_type==='resume')
-                              if (latest && latest.file_url) {
-                                const url = latest.file_url
-                                const w = window.open(url, '_blank')
-                                if (!w) { const a=document.createElement('a'); a.href=url; a.target='_blank'; document.body.appendChild(a); a.click(); a.remove() }
+                              if (latest) {
+                                openFile(latest.id)
                               } else alert('No resume uploaded yet')
                             }}>View</Button>
                           </div>
@@ -637,10 +635,8 @@ export default function StudentDashboard() {
                             </div>
                             <Button size="sm" variant="outline" onClick={()=>{
                               const latest = userFiles.find((x)=> x.file_type==='certificate')
-                              if (latest && latest.file_url) {
-                                const url = latest.file_url
-                                const w = window.open(url, '_blank')
-                                if (!w) { const a=document.createElement('a'); a.href=url; a.target='_blank'; document.body.appendChild(a); a.click(); a.remove() }
+                              if (latest) {
+                                openFile(latest.id)
                               } else alert('No certificate uploaded yet')
                             }}>View</Button>
                           </div>
@@ -698,8 +694,7 @@ export default function StudentDashboard() {
                           <div key={f.id} className="flex items-center justify-between text-sm">
                             <span>{f.filename || f.title} <span className="ml-2 text-gray-500">({f.file_type})</span></span>
                             <div className="flex items-center gap-2">
-                              {f.file_url && <a href={f.file_url} target="_blank" rel="noreferrer" className="underline text-maroon">Open</a>}
-                              {f.file_url && <Button size="sm" variant="outline" onClick={()=> { const w = window.open(f.file_url, '_blank'); if (!w) { const a=document.createElement('a'); a.href=f.file_url; a.target='_blank'; document.body.appendChild(a); a.click(); a.remove() } }}>View</Button>}
+                              <Button size="sm" variant="outline" onClick={()=> openFile(f.id)}>View</Button>
                             </div>
                           </div>
                         ))}
