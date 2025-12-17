@@ -107,7 +107,7 @@ export default function StudentDashboard() {
             name: (`${userData.first_name || ''} ${userData.last_name || ''}`.trim()) || displayName || (userData.email?.split('@')[0] || ''),
             email: userData.email,
           }))
-          const profileDetailsResponse = await fetch(`${API_BASE}/api/v1/users/${userData.id}/profile`)
+          const profileDetailsResponse = await fetch(`${API_BASE}/api/v1/users/${userData.id}/profile`, { cache: 'no-store' })
           if (profileDetailsResponse.ok) {
             const profileData = await profileDetailsResponse.json()
             setProfile(prev => ({
@@ -265,11 +265,24 @@ export default function StudentDashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ first_name: firstName || null, last_name: lastName || null })
       })
-      const refreshed = await fetch(`${API_BASE}/api/v1/users/${userId}`)
+      const refreshed = await fetch(`${API_BASE}/api/v1/users/${userId}?t=${Date.now()}`, { cache: 'no-store' })
       if (refreshed.ok) {
         const u = await refreshed.json()
         const finalName = (`${u.first_name || ''} ${u.last_name || ''}`.trim()) || (u.email?.split('@')[0] || '')
         setProfile(prev => ({ ...prev, name: finalName, email: u.email }))
+      }
+      const refreshedProfile = await fetch(`${API_BASE}/api/v1/users/${userId}/profile?t=${Date.now()}`, { cache: 'no-store' })
+      if (refreshedProfile.ok) {
+        const p = await refreshedProfile.json()
+        setProfile(prev => ({
+          ...prev,
+          phone: p.phone || '',
+          degree: p.degree || '',
+          year: p.year || '',
+          skills: p.skills || '',
+          about: p.about || '',
+          alternateEmail: p.alternate_email || ''
+        }))
       }
       setIsEditing(false)
     } catch (e) {
