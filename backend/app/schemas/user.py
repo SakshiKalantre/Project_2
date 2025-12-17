@@ -24,6 +24,7 @@ class UserUpdate(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     role: Optional[UserRole] = None
+    phone_number: Optional[str] = None
 
 class UserResponse(UserBase):
     id: int

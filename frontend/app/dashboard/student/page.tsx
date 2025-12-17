@@ -62,7 +62,6 @@ export default function StudentDashboard() {
   const [profile, setProfile] = useState({
     name: '',
     email: '',
-    alternateEmail: '',
     phone: '',
     degree: '',
     year: '',
@@ -97,7 +96,7 @@ export default function StudentDashboard() {
         }
         if (!email) return
 
-        let userRes = await fetch(`${API_BASE}/api/v1/users/by-email/${encodeURIComponent(email)}`)
+        let userRes = await fetch(`${API_BASE}/api/v1/users/by-email/${encodeURIComponent(email)}?t=${Date.now()}`, { cache: 'no-store' })
         if (userRes.ok) {
           const userData = await userRes.json()
           uidLocal = userData.id
@@ -116,8 +115,7 @@ export default function StudentDashboard() {
               degree: profileData.degree || '',
               year: profileData.year || '',
               skills: profileData.skills || '',
-              about: profileData.about || '',
-              alternateEmail: profileData.alternate_email || ''
+              about: profileData.about || ''
             }))
           }
 
@@ -257,13 +255,13 @@ export default function StudentDashboard() {
           year: profile.year || null,
           skills: profile.skills || null,
           about: profile.about || null,
-          alternate_email: profile.alternateEmail || null
+          
         })
       })
       await fetch(`${API_BASE}/api/v1/users/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ first_name: firstName || null, last_name: lastName || null })
+        body: JSON.stringify({ first_name: firstName || null, last_name: lastName || null, phone_number: profile.phone || null })
       })
       const refreshed = await fetch(`${API_BASE}/api/v1/users/${userId}?t=${Date.now()}`, { cache: 'no-store' })
       if (refreshed.ok) {
@@ -280,8 +278,7 @@ export default function StudentDashboard() {
           degree: p.degree || '',
           year: p.year || '',
           skills: p.skills || '',
-          about: p.about || '',
-          alternateEmail: p.alternate_email || ''
+          about: p.about || ''
         }))
       }
       setIsEditing(false)
@@ -544,18 +541,7 @@ export default function StudentDashboard() {
                         <Label>Registered Email</Label>
                         <p className="mt-1">{profile.email}</p>
                       </div>
-                      <div>
-                        <Label htmlFor="altEmail">Alternate Email</Label>
-                        {isEditing ? (
-                          <Input 
-                            id="altEmail" 
-                            value={profile.alternateEmail} 
-                            onChange={(e) => setProfile({...profile, alternateEmail: e.target.value})} 
-                          />
-                        ) : (
-                          <p className="mt-1">{profile.alternateEmail || 'Not provided'}</p>
-                        )}
-                      </div>
+                      
                       
                       <div>
                         <Label htmlFor="phone">Phone</Label>
