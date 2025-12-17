@@ -103,7 +103,7 @@ export default function StudentDashboard() {
           setUserId(userData.id)
           setProfile(prev => ({
             ...prev,
-            name: (`${userData.first_name || ''} ${userData.last_name || ''}`.trim()) || displayName || (userData.email?.split('@')[0] || ''),
+            name: (`${userData.first_name || ''} ${userData.last_name || ''}`.trim()) || displayName,
             email: userData.email,
           }))
           const profileDetailsResponse = await fetch(`${API_BASE}/api/v1/users/${userData.id}/profile`, { cache: 'no-store' })
@@ -266,7 +266,7 @@ export default function StudentDashboard() {
       const refreshed = await fetch(`${API_BASE}/api/v1/users/${userId}?t=${Date.now()}`, { cache: 'no-store' })
       if (refreshed.ok) {
         const u = await refreshed.json()
-        const finalName = (`${u.first_name || ''} ${u.last_name || ''}`.trim()) || (u.email?.split('@')[0] || '')
+        const finalName = (`${u.first_name || ''} ${u.last_name || ''}`.trim()) || ''
         setProfile(prev => ({ ...prev, name: finalName, email: u.email }))
       }
       const refreshedProfile = await fetch(`${API_BASE}/api/v1/users/${userId}/profile?t=${Date.now()}`, { cache: 'no-store' })
@@ -432,7 +432,7 @@ export default function StudentDashboard() {
           </div>
           
           <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-600">Welcome, {(profile.name?.trim()?.split(' ')[0]) || (profile.email?.split('@')[0]) || 'Student'}</span>
+            <span className="text-sm text-gray-600">Welcome, {profile.name || 'Student'}</span>
             <div className="bg-gray-200 border-2 border-dashed rounded-xl w-10 h-10" />
             <LogoutButton />
           </div>
