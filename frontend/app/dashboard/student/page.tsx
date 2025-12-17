@@ -376,11 +376,14 @@ export default function StudentDashboard() {
       const res = await postFormDataWithProgress(`${API_BASE}/api/v1/files/resumes`, form, setResumeProgress)
       if (!res.ok) throw new Error('Failed to upload resume')
       try {
-        const saved = await res.json()
-        setUserFiles(prev => [{ id: saved.id, file_type: 'resume', filename: saved.filename, file_url: saved.file_url }, ...prev])
-      } catch {
-        // no index route; keep current list
-      }
+        if (userId) {
+          const filesRes = await fetch(`${API_BASE}/api/v1/files/by-user/${userId}`)
+          if (filesRes.ok) {
+            const files = await filesRes.json()
+            setUserFiles(files)
+          }
+        }
+      } catch {}
       setResumeFile(null)
       setResumeProgress(0)
     } catch (e) {}
@@ -395,11 +398,14 @@ export default function StudentDashboard() {
       const res = await postFormDataWithProgress(`${API_BASE}/api/v1/files/certificates`, form, setCertProgress)
       if (!res.ok) throw new Error('Failed to upload certificate')
       try {
-        const saved = await res.json()
-        setUserFiles(prev => [{ id: saved.id, file_type: 'certificate', filename: saved.title, file_url: saved.file_url }, ...prev])
-      } catch {
-        // no index route; keep current list
-      }
+        if (userId) {
+          const filesRes = await fetch(`${API_BASE}/api/v1/files/by-user/${userId}`)
+          if (filesRes.ok) {
+            const files = await filesRes.json()
+            setUserFiles(files)
+          }
+        }
+      } catch {}
       setCertificateFile(null)
       setCertProgress(0)
     } catch (e) {}
@@ -639,7 +645,7 @@ export default function StudentDashboard() {
                               <FileText className="h-8 w-8 text-maroon mr-3" />
                               <div>
                                 <h4 className="font-medium">Certificates</h4>
-                                <p className="text-sm text-gray-500">3 files</p>
+                                <p className="text-sm text-gray-500">{userFiles.filter(f=>f.file_type==='certificate').length} files</p>
                               </div>
                             </div>
                             <Button size="sm" variant="outline" onClick={()=>{
@@ -708,6 +714,20 @@ export default function StudentDashboard() {
                           </div>
                         ))}
                         {userFiles.length === 0 && <p className="text-gray-500 text-sm">No files uploaded yet</p>}
+                      </div>
+                      <div className="mt-4">
+                        <h5 className="font-medium">Certificates</h5>
+                        <div className="space-y-2 mt-2">
+                          {userFiles.filter(f=>f.file_type==='certificate').map(f=> (
+                            <div key={f.id} className="flex items-center justify-between text-sm">
+                              <span>{f.title || f.filename}</span>
+                              <Button size="sm" variant="outline" onClick={()=> openFile(f.id)}>Open</Button>
+                            </div>
+                          ))}
+                          {userFiles.filter(f=>f.file_type==='certificate').length===0 && (
+                            <p className="text-gray-500 text-sm">No certificates uploaded yet</p>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
