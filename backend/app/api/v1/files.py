@@ -12,6 +12,7 @@ from app.schemas.file import ResumeResponse, ResumeUpdate, CertificateResponse, 
 from app.core.config import settings
 import boto3
 from botocore.config import Config
+from botocore.exceptions import ClientError
 from urllib.parse import urlparse
 
 router = APIRouter()
@@ -199,6 +200,17 @@ def _key_from_url(file_url: str) -> str:
         return '/'.join(parts[1:])
     return path
 
+def _exists_in_r2(file_url: str) -> bool:
+    try:
+        s3 = get_s3()
+        key = _key_from_url(file_url)
+        s3.head_object(Bucket=settings.R2_BUCKET_NAME, Key=key)
+        return True
+    except ClientError:
+        return False
+    except Exception:
+        return False
+
 @router.get("/{file_id}")
 def get_file_info(file_id: int, db: Session = Depends(get_db)):
     resume = db.query(Resume).filter(Resume.id == file_id).first()
@@ -232,9 +244,15 @@ def list_files_by_user(user_id: int, db: Session = Depends(get_db)):
     certs = db.query(Certificate).filter(Certificate.user_id == user_id).all()
     out: List[dict] = []
     for r in resumes:
-        out.append({"id": r.id, "file_type": "resume", "filename": r.filename, "file_url": r.file_url})
+        if r.file_url and _exists_in_r2(r.file_url):
+            out.append({"id": r.id, "file_type": "resume", "filename": r.filename, "file_url": r.file_url})
+        else:
+            db.delete(r)
     for c in certs:
-        out.append({"id": c.id, "file_type": "certificate", "title": c.title, "file_url": c.file_url})
-    # newest first
+        if c.file_url and _exists_in_r2(c.file_url):
+            out.append({"id": c.id, "file_type": "certificate", "title": c.title, "file_url": c.file_url})
+        else:
+            db.delete(c)
+    db.commit()
     out.sort(key=lambda x: x.get('uploaded_at', 0), reverse=True)
     return out
