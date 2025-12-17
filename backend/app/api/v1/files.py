@@ -57,7 +57,7 @@ async def upload_resume(
     
     # Generate unique filename
     # Upload to Cloudflare R2
-    public_url = upload_to_r2("resumes", file, user_id)
+    public_url = upload_to_r2("resume", file, user_id)
     
     # Create resume record
     db_resume = Resume(
@@ -88,7 +88,7 @@ async def upload_certificate(
     
     # Generate unique filename
     # Upload to Cloudflare R2
-    public_url = upload_to_r2("certificates", file, user_id)
+    public_url = upload_to_r2("certificate", file, user_id)
     
     # Create certificate record
     db_certificate = Certificate(
