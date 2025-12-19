@@ -89,15 +89,32 @@ export default function StudentDashboard() {
             localStorage.setItem('currentUser', JSON.stringify({ email, role: 'STUDENT' }))
           }
         }
-        if (!email) {
-          const stored = typeof window !== 'undefined' ? localStorage.getItem('currentUser') : null
-          const current = stored ? JSON.parse(stored) : null
-          email = current?.email || null
-        }
-        if (!email) return
+        const stored = typeof window !== 'undefined' ? localStorage.getItem('currentUser') : null
+        const current = stored ? JSON.parse(stored) : null
+        const storedId: number | null = current?.id || null
+        if (!email) email = current?.email || null
+        if (!email && !storedId) return
 
-        let userRes = await fetch(`${API_BASE}/api/v1/users/by-email/${encodeURIComponent(email)}?t=${Date.now()}`, { cache: 'no-store' })
-        if (userRes.ok) {
+        let userRes: Response
+        if (storedId) {
+          const byId = await fetch(`${API_BASE}/api/v1/users/${storedId}?t=${Date.now()}`, { cache: 'no-store' })
+          if (byId.ok) {
+            const u = await byId.json()
+            uidLocal = u.id
+            setUserId(u.id)
+            setProfile(prev => ({ ...prev, name: (`${u.first_name || ''} ${u.last_name || ''}`.trim()), email: u.email }))
+            const pRes = await fetch(`${API_BASE}/api/v1/users/${u.id}/profile?t=${Date.now()}`, { cache: 'no-store' })
+            if (pRes.ok) {
+              const p = await pRes.json()
+              setProfile(prev => ({ ...prev, phone: p.phone || '', degree: p.degree || '', year: p.year || '', skills: p.skills || '', about: p.about || '' }))
+            }
+            try { if (typeof window !== 'undefined') localStorage.setItem('currentUser', JSON.stringify({ email: u.email, id: u.id, role: 'STUDENT' })) } catch {}
+          }
+        }
+        if (!uidLocal && email) {
+          userRes = await fetch(`${API_BASE}/api/v1/users/by-email/${encodeURIComponent(email)}?t=${Date.now()}`, { cache: 'no-store' })
+        }
+        if (!uidLocal && userRes && userRes.ok) {
           const userData = await userRes.json()
           uidLocal = userData.id
           setUserId(userData.id)
@@ -106,7 +123,7 @@ export default function StudentDashboard() {
             name: (`${userData.first_name || ''} ${userData.last_name || ''}`.trim()),
             email: userData.email,
           }))
-          const profileDetailsResponse = await fetch(`${API_BASE}/api/v1/users/${userData.id}/profile`, { cache: 'no-store' })
+          const profileDetailsResponse = await fetch(`${API_BASE}/api/v1/users/${userData.id}/profile?t=${Date.now()}`, { cache: 'no-store' })
           if (profileDetailsResponse.ok) {
             const profileData = await profileDetailsResponse.json()
             setProfile(prev => ({
@@ -118,8 +135,7 @@ export default function StudentDashboard() {
               about: profileData.about || ''
             }))
           }
-
-          // Load user files for persistence across refresh/logout
+          try { if (typeof window !== 'undefined') localStorage.setItem('currentUser', JSON.stringify({ email: userData.email, id: userData.id, role: 'STUDENT' })) } catch {}
           try {
             const filesRes = await fetch(`${API_BASE}/api/v1/files/by-user/${userData.id}`)
             if (filesRes.ok) {
@@ -127,7 +143,7 @@ export default function StudentDashboard() {
               setUserFiles(files)
             }
           } catch {}
-        } else {
+        } else if (!uidLocal) {
           // First-time user: register in backend
           const names = (displayName || '').split(' ')
           const first_name = names[0] || ''
@@ -148,6 +164,7 @@ export default function StudentDashboard() {
             uidLocal = userData.id
             setUserId(userData.id)
             setProfile(prev => ({ ...prev, name: (`${userData.first_name || ''} ${userData.last_name || ''}`.trim()), email: userData.email }))
+            try { if (typeof window !== 'undefined') localStorage.setItem('currentUser', JSON.stringify({ email: userData.email, id: userData.id, role: 'STUDENT' })) } catch {}
           }
         }
 
