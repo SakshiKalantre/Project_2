@@ -127,12 +127,13 @@ export default function SignUpPage() {
         throw new Error(msg || "Registration failed");
       }
       const created = await res.json();
+      const newUserId = (created?.id ?? created?.user?.id) as number | undefined;
       // Save basic profile phone number
-      if (created?.id && formData.phoneNumber) {
+      if (newUserId && formData.phoneNumber) {
         await fetch(`/api/users/profile`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user_id: created.id, phone: formData.phoneNumber })
+          body: JSON.stringify({ user_id: newUserId, phone: formData.phoneNumber })
         });
       }
       setRegistrationSuccess(true);

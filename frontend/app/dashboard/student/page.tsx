@@ -106,7 +106,22 @@ export default function StudentDashboard() {
             const u = await byId.json()
             uidLocal = u.id
             setUserId(u.id)
-            setProfile(prev => ({ ...prev, name: (`${u.first_name || ''} ${u.last_name || ''}`.trim()), email: u.email }))
+            let n = (`${u.first_name || ''} ${u.last_name || ''}`.trim())
+            if (!n) {
+              try {
+                const pendRaw = typeof window !== 'undefined' ? localStorage.getItem('pendingUser') : null
+                const pend = pendRaw ? JSON.parse(pendRaw) : null
+                const full = (pend?.fullName || '').trim()
+                if (full) {
+                  const parts = full.split(' ')
+                  const first = parts[0] || null
+                  const last = parts.slice(1).join(' ') || null
+                  await fetch(`${API_BASE}/api/v1/users/${u.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ first_name: first, last_name: last }) })
+                  n = full
+                }
+              } catch {}
+            }
+            setProfile(prev => ({ ...prev, name: n, email: u.email }))
             const pRes = await fetch(`${API_BASE}/api/v1/users/${u.id}/profile?t=${Date.now()}`, { cache: 'no-store' })
             if (pRes.ok) {
               const p = await pRes.json()
