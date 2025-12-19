@@ -67,6 +67,11 @@ export default function TPODashboard() {
         const current = stored ? JSON.parse(stored) : null
         email = current?.email || null
       }
+      if (!email) {
+        alert('Please sign up first to access the TPO dashboard')
+        if (typeof window !== 'undefined') window.location.href = '/sign-up'
+        return
+      }
       if (email) {
         const u = await fetch(`${API_BASE_DEFAULT}/api/v1/users/by-email/${encodeURIComponent(email)}`)
         if (u.ok) {
@@ -80,6 +85,10 @@ export default function TPODashboard() {
               setTpoProfile({ alternateEmail: pjson.alternate_email || '', phone: pjson.phone || '' })
             }
           } catch {}
+        } else {
+          alert('Your email is not registered. Please sign up to continue.')
+          if (typeof window !== 'undefined') window.location.href = '/sign-up'
+          return
         }
       }
       const p = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/pending-profiles`)

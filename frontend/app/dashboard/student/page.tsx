@@ -93,7 +93,11 @@ export default function StudentDashboard() {
         const current = stored ? JSON.parse(stored) : null
         const storedId: number | null = current?.id || null
         if (!email) email = current?.email || null
-        if (!email && !storedId) return
+        if (!email && !storedId) {
+          alert('Please sign up first to access the dashboard')
+          if (typeof window !== 'undefined') window.location.href = '/sign-up'
+          return
+        }
 
         let userRes: Response | null = null
         if (storedId) {
@@ -147,28 +151,9 @@ export default function StudentDashboard() {
             }
           } catch {}
         } else if (!uidLocal) {
-          // First-time user: register in backend
-          const names = (displayName || '').split(' ')
-          const first_name = names[0] || ''
-          const last_name = names.slice(1).join(' ')
-          userRes = await fetch(`${API_BASE}/api/v1/users/register`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              clerk_user_id: (user as any)?.id || null,
-              email,
-              first_name,
-              last_name,
-              role: 'STUDENT'
-            })
-          })
-          if (userRes.ok) {
-            const userData = await userRes.json()
-            uidLocal = userData.id
-            setUserId(userData.id)
-            setProfile(prev => ({ ...prev, name: (`${userData.first_name || ''} ${userData.last_name || ''}`.trim()), email: userData.email }))
-            try { if (typeof window !== 'undefined') localStorage.setItem('currentUser', JSON.stringify({ email: userData.email, id: userData.id, role: 'STUDENT' })) } catch {}
-          }
+          alert('Your email is not registered. Please sign up to continue.')
+          if (typeof window !== 'undefined') window.location.href = '/sign-up'
+          return
         }
 
         const jobsResponse = await fetch(`${API_BASE}/api/v1/jobs`)

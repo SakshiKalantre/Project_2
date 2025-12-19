@@ -30,6 +30,7 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('users')
   const [isAddingUser, setIsAddingUser] = useState(false)
   const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001'
+  const [adminUserId, setAdminUserId] = useState<number | null>(null)
   const [pendingCertificates, setPendingCertificates] = useState<Array<any>>([])
   const fetchPendingCertificates = async () => {
     try {
@@ -84,11 +85,37 @@ export default function AdminDashboard() {
       try {
         const role = 'ADMIN'
         if (user && (user.unsafeMetadata?.role !== role)) {
-          await user.update({ unsafeMetadata: { role } })
-        }
+          await user.update({ unsafeMetadata: { role } }) }
       } catch {}
     }
     applyRole()
+    ;(async()=>{
+      try {
+        let email: string | null = null
+        if (user) {
+          // @ts-ignore
+          email = user.primaryEmailAddress?.emailAddress || user.emailAddresses?.[0]?.emailAddress || null
+        }
+        if (!email) {
+          const stored = typeof window !== 'undefined' ? localStorage.getItem('currentUser') : null
+          const current = stored ? JSON.parse(stored) : null
+          email = current?.email || null
+        }
+        if (!email) {
+          alert('Please sign up first to access the admin dashboard')
+          if (typeof window !== 'undefined') window.location.href = '/sign-up'
+          return
+        }
+        const res = await fetch(`${API_BASE}/api/v1/users/by-email/${encodeURIComponent(email)}`)
+        if (res.ok) {
+          const uj = await res.json(); setAdminUserId(uj.id)
+        } else {
+          alert('Your email is not registered. Please sign up to continue.')
+          if (typeof window !== 'undefined') window.location.href = '/sign-up'
+          return
+        }
+      } catch {}
+    })()
   }, [user])
 
   return (
