@@ -96,11 +96,11 @@ export default function TPODashboard() {
         const rows = await p.json()
         setPendingProfiles(rows.map((r:any)=>({
           id: r.user_id,
-          name: `${r.first_name} ${r.last_name}`.trim(),
+          name: `${r.first_name || ''} ${r.last_name || ''}`.trim(),
           email: r.email,
-          degree: r.degree,
-          year: r.year,
-          status: 'Pending'
+          degree: r.degree || '',
+          year: r.year || '',
+          status: r.has_profile ? 'Pending Approval' : 'Profile Not Completed'
         })))
       }
       const pr = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/pending-resumes`)
@@ -509,6 +509,9 @@ export default function TPODashboard() {
                       </CardContent>
                     </Card>
                   ))}
+                  {pendingProfiles.length === 0 && (
+                    <p className="text-sm text-gray-600">No pending or incomplete student profiles found</p>
+                  )}
                 </div>
               </div>
             )}
