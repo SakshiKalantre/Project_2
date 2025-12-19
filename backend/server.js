@@ -904,6 +904,39 @@ app.get('/api/v1/tpo/pending-profiles', async (req, res) => {
   }
 })
 
+app.delete('/api/v1/admin/users/by-email/:email', async (req, res) => {
+  try {
+    const email = req.params.email
+    const ids = await dbClient.query('SELECT id FROM users WHERE email = $1', [email])
+    if (ids.rows.length === 0) return res.status(404).json({ error: 'User not found' })
+    const userId = ids.rows[0].id
+    await dbClient.query('DELETE FROM notifications WHERE user_id = $1', [userId])
+    await dbClient.query('DELETE FROM event_registrations WHERE user_id = $1', [userId])
+    await dbClient.query('DELETE FROM job_applications WHERE user_id = $1', [userId])
+    const del = await dbClient.query('DELETE FROM users WHERE id = $1 RETURNING id', [userId])
+    res.json({ deleted_user_id: del.rows[0].id })
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete user' })
+  }
+})
+
+app.post('/api/v1/admin/reset', async (req, res) => {
+  try {
+    const key = req.headers['x-admin-reset-key']
+    if (!process.env.ADMIN_RESET_KEY || key !== process.env.ADMIN_RESET_KEY) return res.status(403).json({ error: 'Forbidden' })
+    try { await dbClient.query('TRUNCATE TABLE event_registrations RESTART IDENTITY CASCADE') } catch {}
+    try { await dbClient.query('TRUNCATE TABLE job_applications RESTART IDENTITY CASCADE') } catch {}
+    try { await dbClient.query('TRUNCATE TABLE notifications RESTART IDENTITY CASCADE') } catch {}
+    try { await dbClient.query('TRUNCATE TABLE resumes RESTART IDENTITY CASCADE') } catch {}
+    try { await dbClient.query('TRUNCATE TABLE certificates RESTART IDENTITY CASCADE') } catch {}
+    try { await dbClient.query('TRUNCATE TABLE profiles RESTART IDENTITY CASCADE') } catch {}
+    try { await dbClient.query('TRUNCATE TABLE users RESTART IDENTITY CASCADE') } catch {}
+    res.json({ success: true })
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to reset database' })
+  }
+})
+
 // TPO: approve profile
 app.put('/api/v1/tpo/profiles/:user_id/approve', async (req, res) => {
   try {
