@@ -24,7 +24,7 @@ import {
   Filter
 } from 'lucide-react'
 
-const API_BASE_DEFAULT = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001'
+const API_BASE_DEFAULT = process.env.NEXT_PUBLIC_API_URL || 'https://project-2-payz.onrender.com'
 
 export default function TPODashboard() {
   const { user } = useUser()
@@ -91,7 +91,7 @@ export default function TPODashboard() {
           return
         }
       }
-      const p = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/pending-profiles`)
+      const p = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/pending-profiles?t=${Date.now()}`, { cache: 'no-store' })
       if (p.ok) {
         const rows = await p.json()
         setPendingProfiles(rows.map((r:any)=>({
