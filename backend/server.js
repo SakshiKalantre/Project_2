@@ -892,10 +892,11 @@ app.post('/api/v1/tpo/events/:event_id/reminders', async (req, res) => {
 app.get('/api/v1/tpo/pending-profiles', async (req, res) => {
   try {
     const result = await dbClient.query(
-      `SELECT u.id as user_id, u.first_name, u.last_name, u.email, p.phone, p.degree, p.year
-       FROM users u JOIN profiles p ON p.user_id = u.id
-       WHERE COALESCE(p.is_approved, false) = false
-       ORDER BY p.created_at DESC`
+      `SELECT u.id as user_id, u.first_name, u.last_name, u.email,
+              p.phone, p.degree, p.year, COALESCE(p.is_approved, false) as is_approved
+       FROM users u LEFT JOIN profiles p ON p.user_id = u.id
+       WHERE LOWER(u.role) = 'student' AND COALESCE(p.is_approved, false) = false
+       ORDER BY COALESCE(p.created_at, u.created_at) DESC`
     )
     res.json(result.rows)
   } catch (error) {

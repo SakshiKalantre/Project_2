@@ -125,9 +125,24 @@ export default function StudentDashboard() {
         if (!uidLocal && userData) {
           uidLocal = userData.id
           setUserId(userData.id)
+          let dbName = (`${userData.first_name || ''} ${userData.last_name || ''}`.trim())
+          if (!dbName) {
+            try {
+              const pendRaw = typeof window !== 'undefined' ? localStorage.getItem('pendingUser') : null
+              const pend = pendRaw ? JSON.parse(pendRaw) : null
+              const full = (pend?.fullName || '').trim()
+              if (full) {
+                const parts = full.split(' ')
+                const first = parts[0] || null
+                const last = parts.slice(1).join(' ') || null
+                await fetch(`${API_BASE}/api/v1/users/${userData.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ first_name: first, last_name: last }) })
+                dbName = full
+              }
+            } catch {}
+          }
           setProfile(prev => ({
             ...prev,
-            name: (`${userData.first_name || ''} ${userData.last_name || ''}`.trim()),
+            name: dbName,
             email: userData.email,
           }))
           const profileDetailsResponse = await fetch(`${API_BASE}/api/v1/users/${userData.id}/profile?t=${Date.now()}`, { cache: 'no-store' })

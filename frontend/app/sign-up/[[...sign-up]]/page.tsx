@@ -136,7 +136,9 @@ export default function SignUpPage() {
         });
       }
       setRegistrationSuccess(true);
-      localStorage.setItem("pendingUser", JSON.stringify({ email: formData.email, role }));
+      try {
+        localStorage.setItem("pendingUser", JSON.stringify({ email: formData.email, role, fullName: formData.fullName }));
+      } catch {}
       setIsLoading(false);
     } catch (error: any) {
       console.error("SignUp error:", error);
