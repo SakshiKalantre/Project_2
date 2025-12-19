@@ -95,7 +95,7 @@ export default function StudentDashboard() {
         if (!email) email = current?.email || null
         if (!email && !storedId) return
 
-        let userRes: Response
+        let userRes: Response | null = null
         if (storedId) {
           const byId = await fetch(`${API_BASE}/api/v1/users/${storedId}?t=${Date.now()}`, { cache: 'no-store' })
           if (byId.ok) {
