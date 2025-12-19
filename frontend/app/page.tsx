@@ -8,7 +8,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 
 export default function HomePage() {
-  const { isSignedIn, user } = useUser()
+  const clerkReady = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY)
+  const state = clerkReady ? useUser() : ({ isSignedIn: false, user: undefined } as any)
+  const { isSignedIn, user } = state
 
   return (
     <div className="min-h-screen bg-cream">
@@ -30,7 +32,7 @@ export default function HomePage() {
           </nav>
           
           <div className="flex items-center space-x-4">
-            {isSignedIn ? (
+            {isSignedIn && clerkReady ? (
               <>
                 <span className="text-sm text-gray-600">Welcome, {user.firstName}</span>
                 <UserButton afterSignOutUrl="/" />

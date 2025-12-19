@@ -18,14 +18,25 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  const clerkReady = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || process.env.CLERK_PUBLISHABLE_KEY)
+  if (clerkReady) {
+    return (
+      <ClerkProvider>
+        <html lang="en">
+          <body className={cn(inter.className, "min-h-screen bg-cream")}> 
+            {children}
+            <Chatbot />
+          </body>
+        </html>
+      </ClerkProvider>
+    )
+  }
   return (
-    <ClerkProvider>
-      <html lang="en">
-        <body className={cn(inter.className, "min-h-screen bg-cream")}>
-          {children}
-          <Chatbot />
-        </body>
-      </html>
-    </ClerkProvider>
+    <html lang="en">
+      <body className={cn(inter.className, "min-h-screen bg-cream")}> 
+        {children}
+        <Chatbot />
+      </body>
+    </html>
   )
 }
