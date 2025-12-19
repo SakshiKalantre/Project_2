@@ -111,11 +111,14 @@ export default function StudentDashboard() {
             try { if (typeof window !== 'undefined') localStorage.setItem('currentUser', JSON.stringify({ email: u.email, id: u.id, role: 'STUDENT' })) } catch {}
           }
         }
+        let userData: any | null = null
         if (!uidLocal && email) {
-          userRes = await fetch(`${API_BASE}/api/v1/users/by-email/${encodeURIComponent(email)}?t=${Date.now()}`, { cache: 'no-store' })
+          const r = await fetch(`${API_BASE}/api/v1/users/by-email/${encodeURIComponent(email)}?t=${Date.now()}`, { cache: 'no-store' })
+          if (r.ok) {
+            userData = await r.json()
+          }
         }
-        if (!uidLocal && userRes && userRes.ok) {
-          const userData = await userRes.json()
+        if (!uidLocal && userData) {
           uidLocal = userData.id
           setUserId(userData.id)
           setProfile(prev => ({
