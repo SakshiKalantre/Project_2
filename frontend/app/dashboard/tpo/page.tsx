@@ -91,7 +91,7 @@ export default function TPODashboard() {
           return
         }
       }
-      const p = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/pending-profiles?t=${Date.now()}`, { cache: 'no-store' })
+      const p = await fetch(`/api/tpo/pending-profiles`, { cache: 'no-store' })
       if (p.ok) {
         const rows = await p.json()
         setPendingProfiles(rows.map((r:any)=>({
