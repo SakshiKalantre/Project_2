@@ -63,9 +63,14 @@ export default function SignUpPage() {
     const { name, value } = e.target;
     if (name === "role") {
       setRole(value);
-    } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
+      return;
     }
+    if (name === "phoneNumber") {
+      const digitsOnly = value.replace(/\D/g, "");
+      setFormData((prev) => ({ ...prev, phoneNumber: digitsOnly }));
+      return;
+    }
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const validateForm = () => {
@@ -84,6 +89,9 @@ export default function SignUpPage() {
     if (!formData.fullName) newErrors.fullName = "Full name is required";
     if (!formData.email) newErrors.email = "Email is required";
     if (!formData.phoneNumber) newErrors.phoneNumber = "Phone number is required";
+    if (formData.phoneNumber && /[^0-9]/.test(formData.phoneNumber)) {
+      newErrors.phoneNumber = "Only digits are allowed";
+    }
     if (!formData.password) newErrors.password = "Password is required";
     if (!formData.confirmPassword) newErrors.confirmPassword = "Please confirm password";
     if (formData.password !== formData.confirmPassword) {
@@ -268,6 +276,9 @@ export default function SignUpPage() {
                 name="phoneNumber"
                 value={formData.phoneNumber}
                 onChange={handleInputChange}
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={15}
                 placeholder="+91 1234567890"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon focus:border-transparent bg-cream"
               />

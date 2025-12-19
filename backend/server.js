@@ -566,6 +566,7 @@ app.post('/api/v1/clerk/webhook', async (req, res) => {
 // API Routes
 app.post('/api/v1/users/register', async (req, res) => {
     const { email, firstName, lastName, role, phoneNumber, clerkUserId } = req.body;
+    const phoneSanitized = (phoneNumber || '').replace(/\D/g, '');
     
     // Validate required fields
     if (!email || !firstName || !role || !clerkUserId) {
@@ -588,7 +589,7 @@ app.post('/api/v1/users/register', async (req, res) => {
             `INSERT INTO users (clerk_user_id, email, first_name, last_name, phone_number, role, is_active, is_approved, profile_complete, created_at, updated_at)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
              RETURNING id, clerk_user_id, email, first_name, last_name, role, phone_number`,
-            [candidateClerkId, email, firstName, lastName || '', phoneNumber || '', (role || 'student').toLowerCase(), true, (role || '').toUpperCase() === 'STUDENT', false]
+            [candidateClerkId, email, firstName, lastName || '', phoneSanitized || '', (role || 'student').toLowerCase(), true, (role || '').toUpperCase() === 'STUDENT', false]
         );
         
         const newUser = insertResult.rows[0];
@@ -1210,6 +1211,7 @@ app.get('/api/v1/users/by-email/:email', async (req, res) => {
 app.post('/api/v1/users/register', async (req, res) => {
   try {
     const { email, firstName, lastName, role, phoneNumber, clerkUserId } = req.body || {}
+    const phoneSanitized = (phoneNumber || '').replace(/\D/g, '')
     if (!email) return res.status(400).json({ error: 'Email is required' })
     const exists = await dbClient.query('SELECT id FROM users WHERE email = $1', [email])
     if (exists.rows.length > 0) {
@@ -1220,7 +1222,7 @@ app.post('/api/v1/users/register', async (req, res) => {
       `INSERT INTO users (email, first_name, last_name, role, phone_number, clerk_user_id, is_active, is_approved, profile_complete, created_at, updated_at)
        VALUES ($1,$2,$3,$4,$5,$6,true,false,false,NOW(),NOW())
        RETURNING id, clerk_user_id, email, first_name, last_name, role, phone_number`,
-      [email, firstName || null, lastName || null, (role || 'student').toLowerCase(), phoneNumber || null, clerkUserId || null]
+      [email, firstName || null, lastName || null, (role || 'student').toLowerCase(), phoneSanitized || null, clerkUserId || null]
     )
     res.status(201).json(result.rows[0])
   } catch (error) {
