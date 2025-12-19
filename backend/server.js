@@ -591,9 +591,9 @@ app.post('/api/v1/users/register', async (req, res) => {
         
         const insertResult = await dbClient.query(
             `INSERT INTO users (clerk_user_id, email, first_name, last_name, phone_number, role, is_active, is_approved, profile_complete, created_at, updated_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+             VALUES ($1, $2, $3, $4, $5, $6, $7, false, false, NOW(), NOW())
              RETURNING id, clerk_user_id, email, first_name, last_name, role, phone_number`,
-            [candidateClerkId, email, firstName, lastName || '', phoneSanitized || '', (role || 'student').toLowerCase(), true, (role || '').toUpperCase() === 'STUDENT', false]
+            [candidateClerkId, email, firstName, lastName || '', phoneSanitized || '', (role || 'student').toLowerCase(), true]
         );
         
         const newUser = insertResult.rows[0];
@@ -686,6 +686,9 @@ app.post('/api/v1/users/:user_id/profile', async (req, res) => {
        DO UPDATE SET phone = EXCLUDED.phone, degree = EXCLUDED.degree, year = EXCLUDED.year, skills = EXCLUDED.skills, about = EXCLUDED.about, alternate_email = EXCLUDED.alternate_email, updated_at = NOW()`,
       [userId, phone || null, degree || null, year || null, skills || null, about || null, alternate_email || null]
     );
+    const isComplete = [phone, degree, year, skills, about, alternate_email]
+      .every(v => v != null && String(v).trim() !== '');
+    await dbClient.query('UPDATE users SET profile_complete = $2, updated_at = NOW() WHERE id = $1', [userId, isComplete]);
     const result = await dbClient.query('SELECT id, user_id, phone, degree, year, skills, about, alternate_email, is_approved FROM profiles WHERE user_id = $1', [userId]);
     res.json(result.rows[0]);
   } catch (error) {
@@ -951,6 +954,7 @@ app.put('/api/v1/tpo/profiles/:user_id/approve', async (req, res) => {
       [notes || null, userId]
     )
     if (result.rows.length === 0) return res.status(404).json({ error: 'Profile not found' })
+    await dbClient.query('UPDATE users SET is_approved = true, updated_at = NOW() WHERE id = $1', [userId])
     res.json(result.rows[0])
   } catch (error) {
     res.status(500).json({ error: 'Failed to approve profile' })
