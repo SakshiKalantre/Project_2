@@ -8,8 +8,9 @@ from app.core.config import settings
 from app.db.session import engine, Base
 
 def ensure_db_types():
-    with engine.connect() as conn:
-        conn.execute(text(
+    try:
+        with engine.connect() as conn:
+            conn.execute(text(
             """
             DO $$
             BEGIN
@@ -46,21 +47,26 @@ def ensure_db_types():
             END
             $$;
             """
-        ))
+            ))
+    except Exception as e:
+        print(f"Startup warning: ensure_db_types failed: {e}")
 
 def create_tables():
-    Base.metadata.create_all(bind=engine)
-    # Ensure alternate_email column exists in profiles table
-    with engine.connect() as conn:
-        try:
-            conn.execute(text("""
+    try:
+        Base.metadata.create_all(bind=engine)
+        # Ensure alternate_email column exists in profiles table
+        with engine.connect() as conn:
+            try:
+                conn.execute(text("""
                 ALTER TABLE profiles 
                 ADD COLUMN IF NOT EXISTS alternate_email VARCHAR(255);
             """))
-            conn.commit()
-        except Exception as e:
-            conn.rollback()
-            print(f"Note: Could not add alternate_email column (may already exist): {e}")
+                conn.commit()
+            except Exception as e:
+                conn.rollback()
+                print(f"Note: Could not add alternate_email column (may already exist): {e}")
+    except Exception as e:
+        print(f"Startup warning: create_tables failed: {e}")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

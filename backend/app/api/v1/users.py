@@ -4,7 +4,7 @@ from typing import List
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from app.db.session import get_db
-from app.models.user import User, Profile
+from app.models.user import User, Profile, UserRole
 from app.schemas.user import UserCreate, UserResponse, UserUpdate, ProfileCreate, ProfileResponse, ProfileUpdate
 from app.core.config import settings
 
@@ -94,11 +94,25 @@ def create_user_profile(user_id: int, profile: ProfileCreate, db: Session = Depe
             setattr(db_profile, key, value)
         db.commit()
         db.refresh(db_profile)
-        return db_profile
-    db_profile = Profile(user_id=user_id, **profile.dict())
-    db.add(db_profile)
+    else:
+        db_profile = Profile(user_id=user_id, **profile.dict())
+        db.add(db_profile)
+        db.commit()
+        db.refresh(db_profile)
+    # Update user's profile_complete flag based on filled fields
+    is_complete = all(
+        [
+            (db_profile.phone or '').strip() != '',
+            (db_profile.degree or '').strip() != '',
+            (db_profile.year or '').strip() != '',
+            (db_profile.skills or '').strip() != '',
+            (db_profile.about or '').strip() != '',
+            (db_profile.alternate_email or '').strip() != '',
+        ]
+    )
+    db_user.profile_complete = is_complete
     db.commit()
-    db.refresh(db_profile)
+    db.refresh(db_user)
     return db_profile
 
 @router.get("/{user_id}/profile", response_model=ProfileResponse)
@@ -117,9 +131,24 @@ def update_user_profile(user_id: int, profile_update: ProfileUpdate, db: Session
     update_data = profile_update.dict(exclude_unset=True)
     for key, value in update_data.items():
         setattr(db_profile, key, value)
-    
     db.commit()
     db.refresh(db_profile)
+    # Update user's profile_complete flag
+    db_user = db.query(User).filter(User.id == user_id).first()
+    if db_user:
+        is_complete = all(
+            [
+                (db_profile.phone or '').strip() != '',
+                (db_profile.degree or '').strip() != '',
+                (db_profile.year or '').strip() != '',
+                (db_profile.skills or '').strip() != '',
+                (db_profile.about or '').strip() != '',
+                (db_profile.alternate_email or '').strip() != '',
+            ]
+        )
+        db_user.profile_complete = is_complete
+        db.commit()
+        db.refresh(db_user)
     return db_profile
 @router.get("/by-email/{email}", response_model=UserResponse)
 def get_user_by_email(email: str, db: Session = Depends(get_db)):
@@ -214,3 +243,48 @@ def save_tpo_profile(user_id: int, profile_data: ProfileUpdate, db: Session = De
         db.commit()
         db.refresh(db_profile)
         return db_profile
+
+# TPO: Pending profiles (students needing review)
+@router.get("/tpo/pending-profiles")
+def tpo_pending_profiles(db: Session = Depends(get_db)):
+    students = (
+        db.query(User, Profile)
+        .outerjoin(Profile, Profile.user_id == User.id)
+        .filter(User.role == UserRole.STUDENT)
+        .all()
+    )
+    rows = []
+    for u, p in students:
+        has_profile = p is not None
+        profile_is_approved = bool(getattr(p, 'is_approved', False)) if p else False
+        user_is_approved = bool(getattr(u, 'is_approved', False))
+        if (not has_profile) or (not profile_is_approved) or (not user_is_approved):
+            rows.append({
+                "user_id": u.id,
+                "first_name": u.first_name,
+                "last_name": u.last_name,
+                "email": u.email,
+                "phone": getattr(p, 'phone', None) if p else None,
+                "degree": getattr(p, 'degree', None) if p else None,
+                "year": getattr(p, 'year', None) if p else None,
+                "has_profile": has_profile,
+                "profile_is_approved": profile_is_approved,
+                "user_is_approved": user_is_approved,
+            })
+    return rows
+
+# TPO: Approve a student's profile
+@router.put("/tpo/profiles/{user_id}/approve")
+def tpo_approve_profile(user_id: int, db: Session = Depends(get_db)):
+    db_profile = db.query(Profile).filter(Profile.user_id == user_id).first()
+    if not db_profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    db_profile.is_approved = True
+    db.commit()
+    db.refresh(db_profile)
+    db_user = db.query(User).filter(User.id == user_id).first()
+    if db_user:
+        db_user.is_approved = True
+        db.commit()
+        db.refresh(db_user)
+    return { "user_id": user_id, "is_approved": True }
