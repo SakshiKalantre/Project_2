@@ -39,7 +39,7 @@ export default function TPODashboard() {
   const [verifiedResumes, setVerifiedResumes] = useState<Array<any>>([])
   const [resumeFilter, setResumeFilter] = useState<'pending'|'verified'>('pending')
   const [approvedStudents, setApprovedStudents] = useState<Array<any>>([])
-  const [tpoProfile, setTpoProfile] = useState({ alternateEmail:'', phone:'' })
+  const [tpoProfile, setTpoProfile] = useState({ phone:'' })
   const [isEditingProfile, setIsEditingProfile] = useState(false)
   const [notificationTitle, setNotificationTitle] = useState('')
   const [notificationMessage, setNotificationMessage] = useState('')
@@ -84,7 +84,7 @@ export default function TPODashboard() {
             const prf = await fetch(`/api/tpo/profile/${userData.id}`)
             if (prf.ok) {
               const pjson = await prf.json()
-              setTpoProfile({ alternateEmail: pjson.alternate_email || '', phone: pjson.phone || '' })
+              setTpoProfile({ phone: pjson.phone || '' })
             }
           } catch {}
         } else {
@@ -419,12 +419,8 @@ export default function TPODashboard() {
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="altEmail">Alternate Email</Label>
-                        {isEditingProfile ? (
-                          <Input id="altEmail" value={tpoProfile.alternateEmail} onChange={(e)=>setTpoProfile({...tpoProfile, alternateEmail: e.target.value})} />
-                        ) : (
-                          <p className="mt-1 text-gray-700">{tpoProfile.alternateEmail || 'Not provided'}</p>
-                        )}
+                        <Label>TPO Name</Label>
+                        <p className="mt-1 text-gray-700">{tpoDisplay.name || 'Not provided'}</p>
                       </div>
                       <div>
                         <Label htmlFor="phone">Phone</Label>
@@ -441,12 +437,12 @@ export default function TPODashboard() {
                       <Button className="bg-maroon hover:bg-maroon/90" onClick={async()=>{
                         try {
                           if (!tpoUserId) return
-                          const s = await fetch(`/api/tpo/profile/${tpoUserId}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ alternate_email: tpoProfile.alternateEmail || null, phone: tpoProfile.phone || null }) })
+                          const s = await fetch(`/api/tpo/profile/${tpoUserId}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ phone: tpoProfile.phone || null }) })
                           if (s.ok) {
                             const prf = await fetch(`/api/tpo/profile/${tpoUserId}?t=${Date.now()}`, { cache:'no-store' })
                             if (prf.ok) {
                               const pjson = await prf.json()
-                              setTpoProfile({ alternateEmail: pjson.alternate_email || '', phone: pjson.phone || '' })
+                              setTpoProfile({ phone: pjson.phone || '' })
                             }
                           }
                           setIsEditingProfile(false)
