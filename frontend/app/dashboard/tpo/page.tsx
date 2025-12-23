@@ -81,7 +81,7 @@ export default function TPODashboard() {
           setTpoDisplay({ name: `${userData.first_name || ''} ${userData.last_name || ''}`.trim(), email: userData.email })
           // load tpo profile
           try {
-            const prf = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/${userData.id}/profile`)
+            const prf = await fetch(`/api/tpo/profile/${userData.id}`)
             if (prf.ok) {
               const pjson = await prf.json()
               setTpoProfile({ alternateEmail: pjson.alternate_email || '', phone: pjson.phone || '' })
@@ -441,9 +441,9 @@ export default function TPODashboard() {
                       <Button className="bg-maroon hover:bg-maroon/90" onClick={async()=>{
                         try {
                           if (!tpoUserId) return
-                          const s = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/${tpoUserId}/profile`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ alternate_email: tpoProfile.alternateEmail || null, phone: tpoProfile.phone || null }) })
+                          const s = await fetch(`/api/tpo/profile/${tpoUserId}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ alternate_email: tpoProfile.alternateEmail || null, phone: tpoProfile.phone || null }) })
                           if (s.ok) {
-                            const prf = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/${tpoUserId}/profile?t=${Date.now()}`, { cache:'no-store' })
+                            const prf = await fetch(`/api/tpo/profile/${tpoUserId}?t=${Date.now()}`, { cache:'no-store' })
                             if (prf.ok) {
                               const pjson = await prf.json()
                               setTpoProfile({ alternateEmail: pjson.alternate_email || '', phone: pjson.phone || '' })
