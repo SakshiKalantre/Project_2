@@ -40,6 +40,7 @@ export default function TPODashboard() {
   const [resumeFilter, setResumeFilter] = useState<'pending'|'verified'>('pending')
   const [approvedStudents, setApprovedStudents] = useState<Array<any>>([])
   const [tpoProfile, setTpoProfile] = useState({ phone:'' })
+  const [tpoName, setTpoName] = useState('')
   const [isEditingProfile, setIsEditingProfile] = useState(false)
   const [notificationTitle, setNotificationTitle] = useState('')
   const [notificationMessage, setNotificationMessage] = useState('')
@@ -79,6 +80,7 @@ export default function TPODashboard() {
           const userData = await u.json()
           setTpoUserId(userData.id)
           setTpoDisplay({ name: `${userData.first_name || ''} ${userData.last_name || ''}`.trim(), email: userData.email })
+          setTpoName(`${userData.first_name || ''} ${userData.last_name || ''}`.trim())
           // load tpo profile
           try {
             const prf = await fetch(`/api/tpo/profile/${userData.id}`)
@@ -419,8 +421,12 @@ export default function TPODashboard() {
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <Label>TPO Name</Label>
-                        <p className="mt-1 text-gray-700">{tpoDisplay.name || 'Not provided'}</p>
+                        <Label htmlFor="tpoName">TPO Name</Label>
+                        {isEditingProfile ? (
+                          <Input id="tpoName" value={tpoName} onChange={(e)=>setTpoName(e.target.value)} />
+                        ) : (
+                          <p className="mt-1 text-gray-700">{tpoDisplay.name || 'Not provided'}</p>
+                        )}
                       </div>
                       <div>
                         <Label htmlFor="phone">Phone</Label>
@@ -443,6 +449,19 @@ export default function TPODashboard() {
                             if (prf.ok) {
                               const pjson = await prf.json()
                               setTpoProfile({ phone: pjson.phone || '' })
+                            }
+                          }
+                          const parts = (tpoName || '').trim().replace(/\s+/g,' ').split(' ')
+                          const first = parts[0] || null
+                          const last = parts.slice(1).join(' ') || null
+                          const upd = await fetch(`${API_BASE_DEFAULT}/api/v1/users/${tpoUserId}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ first_name: first, last_name: last }) })
+                          if (upd.ok) {
+                            const ures = await fetch(`${API_BASE_DEFAULT}/api/v1/users/${tpoUserId}?t=${Date.now()}`, { cache:'no-store' })
+                            if (ures.ok) {
+                              const ujson = await ures.json()
+                              const nm = (`${ujson.first_name || ''} ${ujson.last_name || ''}`).trim()
+                              setTpoDisplay({ name: nm, email: ujson.email })
+                              setTpoName(nm)
                             }
                           }
                           setIsEditingProfile(false)
