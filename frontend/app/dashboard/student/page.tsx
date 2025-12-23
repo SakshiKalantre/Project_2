@@ -160,6 +160,7 @@ export default function StudentDashboard() {
             name: dbName,
             email: userData.email,
           }))
+          try { if (typeof window !== 'undefined') localStorage.setItem('currentUser', JSON.stringify({ email: userData.email, id: userData.id, name: dbName, role: 'STUDENT' })) } catch {}
           const profileDetailsResponse = await fetch(`${API_BASE}/api/v1/users/${userData.id}/profile?t=${Date.now()}`, { cache: 'no-store' })
           if (profileDetailsResponse.ok) {
             const profileData = await profileDetailsResponse.json()
@@ -569,7 +570,7 @@ export default function StudentDashboard() {
                             onChange={(e) => setProfile({...profile, name: e.target.value})} 
                           />
                         ) : (
-                          <p className="mt-1">{profile.name}</p>
+                          <p className="mt-1">{profile.name || (typeof window !== 'undefined' ? ((JSON.parse(localStorage.getItem('currentUser')||'{}')?.name) || ((profile.email||'').split('@')[0]||'')) : '')}</p>
                         )}
                       </div>
                       

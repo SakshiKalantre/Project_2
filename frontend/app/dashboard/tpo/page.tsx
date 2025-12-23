@@ -437,6 +437,7 @@ export default function TPODashboard() {
                     </div>
                     <div className="mt-4 flex gap-2">
                       <Button variant="outline" onClick={()=>setIsEditingProfile(true)}>Edit</Button>
+                      {isEditingProfile && (
                       <Button className="bg-maroon hover:bg-maroon/90" onClick={async()=>{
                         try {
                           if (!tpoUserId) return
@@ -451,6 +452,7 @@ export default function TPODashboard() {
                           setIsEditingProfile(false)
                         } catch {}
                       }}>Save</Button>
+                      )}
                       <Button variant="outline" onClick={async()=>{
                         try {
                           const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/stats/summary.pdf`)
