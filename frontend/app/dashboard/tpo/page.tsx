@@ -33,6 +33,7 @@ export default function TPODashboard() {
   const [jobs, setJobs] = useState<Array<any>>([])
   const [jobForm, setJobForm] = useState({ title:'', company:'', location:'', salary:'', type:'Full-time', description:'', requirements:'', deadline:'', job_url:'' })
   const [tpoUserId, setTpoUserId] = useState<number | null>(null)
+  const [tpoDisplay, setTpoDisplay] = useState<{ name: string; email: string }>({ name: '', email: '' })
   const [pendingProfiles, setPendingProfiles] = useState<Array<any>>([])
   const [pendingResumes, setPendingResumes] = useState<Array<any>>([])
   const [verifiedResumes, setVerifiedResumes] = useState<Array<any>>([])
@@ -77,6 +78,7 @@ export default function TPODashboard() {
         if (u.ok) {
           const userData = await u.json()
           setTpoUserId(userData.id)
+          setTpoDisplay({ name: `${userData.first_name || ''} ${userData.last_name || ''}`.trim(), email: userData.email })
           // load tpo profile
           try {
             const prf = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/${userData.id}/profile`)
@@ -323,8 +325,10 @@ export default function TPODashboard() {
           </div>
           
           <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-600">TPO Dashboard</span>
-            <div className="bg-gray-200 border-2 border-dashed rounded-xl w-10 h-10" />
+            <div className="text-right">
+              <div className="text-sm text-gray-600">{tpoDisplay.name || 'TPO'}</div>
+              <div className="text-xs text-gray-500">{tpoDisplay.email || ''}</div>
+            </div>
             <LogoutButton />
           </div>
         </div>
