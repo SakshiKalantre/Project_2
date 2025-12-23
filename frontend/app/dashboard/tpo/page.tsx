@@ -96,14 +96,17 @@ export default function TPODashboard() {
       const p = await fetch(`/api/tpo/pending-profiles`, { cache: 'no-store' })
       if (p.ok) {
         const rows = await p.json()
-        setPendingProfiles(rows.map((r:any)=>({
-          id: r.user_id,
-          name: `${r.first_name || ''} ${r.last_name || ''}`.trim(),
-          email: r.email,
-          degree: r.degree || '',
-          year: r.year || '',
-          status: r.has_profile ? 'Pending Approval' : 'Profile Not Completed'
-        })))
+        setPendingProfiles(rows.map((r:any)=>{
+          const name = (`${r.first_name || ''} ${r.last_name || ''}`.trim()) || (r.email?.split('@')[0] || 'Student')
+          return {
+            id: r.user_id,
+            name,
+            email: r.email,
+            degree: r.degree || '',
+            year: r.year || '',
+            status: r.has_profile ? 'Pending Approval' : 'Profile Not Completed'
+          }
+        }))
       }
       const pr = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/pending-resumes`)
       if (pr.ok) {

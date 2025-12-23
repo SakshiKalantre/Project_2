@@ -897,12 +897,13 @@ app.get('/api/v1/tpo/pending-profiles', async (req, res) => {
     const result = await dbClient.query(
       `SELECT u.id AS user_id, u.first_name, u.last_name, u.email,
               p.id AS profile_id, p.phone, p.degree, p.year,
-              COALESCE(p.is_approved, false) AS is_approved,
+              COALESCE(p.is_approved, false) AS profile_is_approved,
+              COALESCE(u.is_approved, false) AS user_is_approved,
               (p.id IS NOT NULL) AS has_profile
        FROM users u
        LEFT JOIN profiles p ON p.user_id = u.id
        WHERE LOWER(u.role) = 'student'
-         AND (p.id IS NULL OR COALESCE(p.is_approved, false) = false)
+         AND (p.id IS NULL OR COALESCE(p.is_approved, false) = false OR COALESCE(u.is_approved, false) = false)
        ORDER BY COALESCE(p.created_at, u.created_at) DESC`
     )
     res.json(result.rows)

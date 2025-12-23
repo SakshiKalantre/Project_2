@@ -303,6 +303,7 @@ export default function StudentDashboard() {
         const u = await refreshed.json()
         const finalName = (`${u.first_name || ''} ${u.last_name || ''}`.trim()) || ''
         setProfile(prev => ({ ...prev, name: finalName, email: u.email }))
+        try { if (typeof window !== 'undefined') localStorage.setItem('currentUser', JSON.stringify({ email: u.email, id: u.id, role: 'STUDENT' })) } catch {}
       }
       const refreshedProfile = await fetch(`${API_BASE}/api/v1/users/${userId}/profile?t=${Date.now()}`, { cache: 'no-store' })
       if (refreshedProfile.ok) {
