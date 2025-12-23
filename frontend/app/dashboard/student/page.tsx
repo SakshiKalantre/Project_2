@@ -275,14 +275,22 @@ export default function StudentDashboard() {
 
   const handleSaveProfile = async () => {
     try {
-      if (!userId) return
+      if (!userId) {
+        alert('User ID not found')
+        return
+      }
       const cleanName = (profile.name || '').trim().replace(/\s+/g, ' ')
-      if (!cleanName) { setIsEditing(false); return }
+      if (!cleanName) {
+        alert('Please enter a valid name')
+        setIsEditing(false)
+        return
+      }
       const parts = cleanName.split(' ')
       const firstName = parts[0] || ''
       const lastName = parts.slice(1).join(' ')
 
-      await fetch(`${API_BASE}/api/v1/users/${userId}/profile`, {
+      // Save profile details (phone, degree, year, skills, about)
+      const profileRes = await fetch(`${API_BASE}/api/v1/users/${userId}/profile`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -291,21 +299,36 @@ export default function StudentDashboard() {
           year: profile.year || null,
           skills: profile.skills || null,
           about: profile.about || null,
-          
         })
       })
-      await fetch(`${API_BASE}/api/v1/users/${userId}`, {
+      if (!profileRes.ok) {
+        console.error('Profile save failed:', await profileRes.text())
+      }
+      
+      // Save user name
+      const userRes = await fetch(`${API_BASE}/api/v1/users/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ first_name: firstName || null, last_name: lastName || null, phone_number: profile.phone || null })
       })
+      if (!userRes.ok) {
+        console.error('User update failed:', await userRes.text())
+        alert('Failed to save name')
+        return
+      }
+      
+      // Fetch updated user data with cache busting
       const refreshed = await fetch(`${API_BASE}/api/v1/users/${userId}?t=${Date.now()}`, { cache: 'no-store' })
       if (refreshed.ok) {
         const u = await refreshed.json()
         const finalName = (`${u.first_name || ''} ${u.last_name || ''}`.trim()) || ''
         setProfile(prev => ({ ...prev, name: finalName, email: u.email }))
         try { if (typeof window !== 'undefined') localStorage.setItem('currentUser', JSON.stringify({ email: u.email, id: u.id, role: 'STUDENT' })) } catch {}
+      } else {
+        console.error('Failed to fetch updated user data')
       }
+      
+      // Fetch updated profile data with cache busting
       const refreshedProfile = await fetch(`${API_BASE}/api/v1/users/${userId}/profile?t=${Date.now()}`, { cache: 'no-store' })
       if (refreshedProfile.ok) {
         const p = await refreshedProfile.json()
@@ -317,9 +340,15 @@ export default function StudentDashboard() {
           skills: p.skills || '',
           about: p.about || ''
         }))
+      } else {
+        console.error('Failed to fetch updated profile data')
       }
+      
       setIsEditing(false)
+      alert('Profile saved successfully!')
     } catch (e) {
+      console.error('Save error:', e)
+      alert('Error saving profile: ' + (e instanceof Error ? e.message : 'Unknown error'))
       setIsEditing(false)
     }
   }

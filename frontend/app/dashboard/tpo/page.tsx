@@ -83,7 +83,7 @@ export default function TPODashboard() {
           setTpoName(`${userData.first_name || ''} ${userData.last_name || ''}`.trim())
           // load tpo profile
           try {
-            const prf = await fetch(`/api/tpo/profile/${userData.id}`)
+            const prf = await fetch(`/api/tpo/profile/${userData.id}?t=${Date.now()}`, { cache:'no-store' })
             if (prf.ok) {
               const pjson = await prf.json()
               setTpoProfile({ phone: pjson.phone || '' })
@@ -442,30 +442,55 @@ export default function TPODashboard() {
                       {isEditingProfile && (
                       <Button className="bg-maroon hover:bg-maroon/90" onClick={async()=>{
                         try {
-                          if (!tpoUserId) return
-                          const s = await fetch(`/api/tpo/profile/${tpoUserId}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ phone: tpoProfile.phone || null }) })
-                          if (s.ok) {
-                            const prf = await fetch(`/api/tpo/profile/${tpoUserId}?t=${Date.now()}`, { cache:'no-store' })
-                            if (prf.ok) {
-                              const pjson = await prf.json()
-                              setTpoProfile({ phone: pjson.phone || '' })
-                            }
+                          if (!tpoUserId) {
+                            alert('User ID not found')
+                            return
                           }
+                          // Save profile (phone)
+                          const s = await fetch(`/api/tpo/profile/${tpoUserId}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ phone: tpoProfile.phone || null }) })
+                          if (!s.ok) {
+                            const errText = await s.text()
+                            console.error('Profile save failed:', errText)
+                            alert('Failed to save profile')
+                            return
+                          }
+                          // Fetch updated profile
+                          const prf = await fetch(`/api/tpo/profile/${tpoUserId}?t=${Date.now()}`, { cache:'no-store' })
+                          if (prf.ok) {
+                            const pjson = await prf.json()
+                            setTpoProfile({ phone: pjson.phone || '' })
+                          } else {
+                            console.error('Failed to fetch updated profile')
+                          }
+                          
+                          // Save user name
                           const parts = (tpoName || '').trim().replace(/\s+/g,' ').split(' ')
                           const first = parts[0] || null
                           const last = parts.slice(1).join(' ') || null
                           const upd = await fetch(`${API_BASE_DEFAULT}/api/v1/users/${tpoUserId}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ first_name: first, last_name: last }) })
-                          if (upd.ok) {
-                            const ures = await fetch(`${API_BASE_DEFAULT}/api/v1/users/${tpoUserId}?t=${Date.now()}`, { cache:'no-store' })
-                            if (ures.ok) {
-                              const ujson = await ures.json()
-                              const nm = (`${ujson.first_name || ''} ${ujson.last_name || ''}`).trim()
-                              setTpoDisplay({ name: nm, email: ujson.email })
-                              setTpoName(nm)
-                            }
+                          if (!upd.ok) {
+                            const errText = await upd.text()
+                            console.error('User update failed:', errText)
+                            alert('Failed to update name')
+                            return
                           }
+                          // Fetch updated user
+                          const ures = await fetch(`${API_BASE_DEFAULT}/api/v1/users/${tpoUserId}?t=${Date.now()}`, { cache:'no-store' })
+                          if (ures.ok) {
+                            const ujson = await ures.json()
+                            const nm = (`${ujson.first_name || ''} ${ujson.last_name || ''}`).trim()
+                            setTpoDisplay({ name: nm, email: ujson.email })
+                            setTpoName(nm)
+                          } else {
+                            console.error('Failed to fetch updated user')
+                          }
+                          
                           setIsEditingProfile(false)
-                        } catch {}
+                          alert('Profile saved successfully!')
+                        } catch (e) {
+                          console.error('Save error:', e)
+                          alert('Error saving profile: ' + (e instanceof Error ? e.message : 'Unknown error'))
+                        }
                       }}>Save</Button>
                       )}
                       <Button variant="outline" onClick={async()=>{
