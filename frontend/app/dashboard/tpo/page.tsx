@@ -437,7 +437,14 @@ export default function TPODashboard() {
                       <Button className="bg-maroon hover:bg-maroon/90" onClick={async()=>{
                         try {
                           if (!tpoUserId) return
-                          await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/${tpoUserId}/profile`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ alternate_email: tpoProfile.alternateEmail || null, phone: tpoProfile.phone || null }) })
+                          const s = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/${tpoUserId}/profile`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ alternate_email: tpoProfile.alternateEmail || null, phone: tpoProfile.phone || null }) })
+                          if (s.ok) {
+                            const prf = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/${tpoUserId}/profile?t=${Date.now()}`, { cache:'no-store' })
+                            if (prf.ok) {
+                              const pjson = await prf.json()
+                              setTpoProfile({ alternateEmail: pjson.alternate_email || '', phone: pjson.phone || '' })
+                            }
+                          }
                           setIsEditingProfile(false)
                         } catch {}
                       }}>Save</Button>
