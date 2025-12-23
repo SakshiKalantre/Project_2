@@ -50,6 +50,17 @@ def ensure_db_types():
 
 def create_tables():
     Base.metadata.create_all(bind=engine)
+    # Ensure alternate_email column exists in profiles table
+    with engine.connect() as conn:
+        try:
+            conn.execute(text("""
+                ALTER TABLE profiles 
+                ADD COLUMN IF NOT EXISTS alternate_email VARCHAR(255);
+            """))
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            print(f"Note: Could not add alternate_email column (may already exist): {e}")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

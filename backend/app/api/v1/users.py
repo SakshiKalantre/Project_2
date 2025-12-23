@@ -155,3 +155,62 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Unexpected error: {e}")
+
+# TPO Profile Endpoints
+@router.get("/tpo/{user_id}/profile", response_model=ProfileResponse)
+def get_tpo_profile(user_id: int, db: Session = Depends(get_db)):
+    """
+    Get TPO profile with alternate email and phone
+    """
+    db_user = db.query(User).filter(User.id == user_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    db_profile = db.query(Profile).filter(Profile.user_id == user_id).first()
+    if not db_profile:
+        # Return empty profile if doesn't exist
+        return ProfileResponse(
+            id=0,
+            user_id=user_id,
+            phone=None,
+            alternate_email=None,
+            degree=None,
+            year=None,
+            skills=None,
+            about=None,
+            is_approved=False,
+            created_at=None,
+            updated_at=None
+        )
+    return db_profile
+
+@router.post("/tpo/{user_id}/profile", response_model=ProfileResponse)
+def save_tpo_profile(user_id: int, profile_data: ProfileUpdate, db: Session = Depends(get_db)):
+    """
+    Save or update TPO profile (alternate email and phone)
+    """
+    db_user = db.query(User).filter(User.id == user_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    db_profile = db.query(Profile).filter(Profile.user_id == user_id).first()
+    
+    if db_profile:
+        # Update existing profile
+        update_data = profile_data.dict(exclude_unset=True)
+        for key, value in update_data.items():
+            setattr(db_profile, key, value)
+        db.commit()
+        db.refresh(db_profile)
+        return db_profile
+    else:
+        # Create new profile
+        db_profile = Profile(
+            user_id=user_id,
+            phone=profile_data.phone,
+            alternate_email=profile_data.alternate_email
+        )
+        db.add(db_profile)
+        db.commit()
+        db.refresh(db_profile)
+        return db_profile

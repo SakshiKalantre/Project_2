@@ -38,6 +38,7 @@ class UserResponse(UserBase):
 
 class ProfileBase(BaseModel):
     phone: Optional[str] = None
+    alternate_email: Optional[str] = None
     degree: Optional[str] = None
     year: Optional[str] = None
     skills: Optional[str] = None
@@ -58,3 +59,4 @@ class ProfileResponse(ProfileBase):
     
     class Config:
         from_attributes = True
+        populate_by_name = True

@@ -41,6 +41,7 @@ class Profile(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
     phone = Column(String, nullable=True)
+    alternate_email = Column(String, nullable=True)
     degree = Column(String, nullable=True)
     year = Column(String, nullable=True)
     skills = Column(Text, nullable=True)  # Comma-separated skills
