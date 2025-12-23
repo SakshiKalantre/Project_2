@@ -699,9 +699,12 @@ app.post('/api/v1/users/:user_id/profile', async (req, res) => {
 // Update basic user info (name only; email cannot be changed here)
 app.put('/api/v1/users/:user_id', async (req, res) => {
   const userId = parseInt(req.params.user_id);
-  const { first_name, last_name } = req.body;
+  const { first_name, last_name, phone_number } = req.body || {};
   try {
-    const result = await dbClient.query('UPDATE users SET first_name = COALESCE($1, first_name), last_name = COALESCE($2, last_name), updated_at = NOW() WHERE id = $3 RETURNING id, clerk_user_id, email, first_name, last_name, role, phone_number', [first_name || null, last_name || null, userId]);
+    const result = await dbClient.query(
+      'UPDATE users SET first_name = COALESCE($1, first_name), last_name = COALESCE($2, last_name), phone_number = COALESCE($3, phone_number), updated_at = NOW() WHERE id = $4 RETURNING id, clerk_user_id, email, first_name, last_name, role, phone_number',
+      [first_name || null, last_name || null, phone_number || null, userId]
+    );
     if (result.rows.length === 0) return res.status(404).json({ error: 'User not found' });
     res.json(result.rows[0]);
   } catch (error) {
