@@ -282,6 +282,43 @@ export default function TPODashboard() {
   }, [activeTab])
 
   useEffect(() => {
+    let poll: any
+    const refreshResumes = async () => {
+      try {
+        if (activeTab === 'resumes') {
+          const pr = await fetch(`${API_BASE_DEFAULT}/api/v1/files/tpo/pending-resumes`)
+          if (pr.ok) {
+            const rows = await pr.json()
+            setPendingResumes(rows.map((r:any)=>({
+              id: r.id,
+              name: `${r.first_name || ''} ${r.last_name || ''}`.trim(),
+              email: r.email,
+              fileName: r.file_name,
+              uploaded: r.uploaded_at ? new Date(r.uploaded_at).toLocaleString() : '',
+              status: r.is_verified ? 'Verified' : 'Pending'
+            })))
+          }
+          const vr = await fetch(`${API_BASE_DEFAULT}/api/v1/files/tpo/verified-resumes`)
+          if (vr.ok) {
+            const rows = await vr.json()
+            setVerifiedResumes(rows.map((r:any)=>({
+              id: r.id,
+              name: `${r.first_name || ''} ${r.last_name || ''}`.trim(),
+              email: r.email,
+              fileName: r.file_name,
+              uploaded: r.uploaded_at ? new Date(r.uploaded_at).toLocaleString() : '',
+              status: 'Verified'
+            })))
+          }
+        }
+      } catch {}
+    }
+    refreshResumes()
+    if (activeTab === 'resumes') poll = setInterval(refreshResumes, 10000)
+    return () => { if (poll) clearInterval(poll) }
+  }, [activeTab])
+
+  useEffect(() => {
     const applyRole = async () => {
       try {
         const role = 'TPO'

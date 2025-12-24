@@ -271,33 +271,50 @@ def list_files_by_user(user_id: int, db: Session = Depends(get_db)):
 # TPO views for resumes
 @router.get("/tpo/pending-resumes")
 def tpo_pending_resumes(db: Session = Depends(get_db)):
-    rows = db.query(Resume).filter(Resume.is_verified == False).all()
-    return [
-        {
+    rows = (
+        db.query(Resume)
+        .filter(Resume.is_verified == False)
+        .all()
+    )
+    out = []
+    for r in rows:
+        # join user lazily to include name/email
+        u = getattr(r, 'user', None)
+        out.append({
             "id": r.id,
             "user_id": r.user_id,
+            "first_name": getattr(u, 'first_name', None),
+            "last_name": getattr(u, 'last_name', None),
+            "email": getattr(u, 'email', None),
             "file_name": r.filename,
             "file_url": r.file_url,
             "is_verified": r.is_verified,
             "uploaded_at": getattr(r, 'uploaded_at', None),
-        }
-        for r in rows
-    ]
+        })
+    return out
 
 @router.get("/tpo/verified-resumes")
 def tpo_verified_resumes(db: Session = Depends(get_db)):
-    rows = db.query(Resume).filter(Resume.is_verified == True).all()
-    return [
-        {
+    rows = (
+        db.query(Resume)
+        .filter(Resume.is_verified == True)
+        .all()
+    )
+    out = []
+    for r in rows:
+        u = getattr(r, 'user', None)
+        out.append({
             "id": r.id,
             "user_id": r.user_id,
+            "first_name": getattr(u, 'first_name', None),
+            "last_name": getattr(u, 'last_name', None),
+            "email": getattr(u, 'email', None),
             "file_name": r.filename,
             "file_url": r.file_url,
             "is_verified": r.is_verified,
             "uploaded_at": getattr(r, 'uploaded_at', None),
-        }
-        for r in rows
-    ]
+        })
+    return out
 
 @router.put("/resumes/{resume_id}/verify")
 def verify_resume(resume_id: int, db: Session = Depends(get_db)):
