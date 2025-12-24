@@ -582,7 +582,7 @@ export default function TPODashboard() {
                             const message = prompt('Enter message body')
                             if (!message) return
                             try {
-                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/users/${profile.id}/notifications`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ title, message }) })
+                              const res = await fetch(`/api/notifications/send`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ user_id: profile.id, title, message }) })
                               if (!res.ok) alert('Failed to send message')
                             } catch { alert('Failed to send message') }
                           }}>
@@ -763,7 +763,7 @@ export default function TPODashboard() {
                                 const ur = await fetch(`${API_BASE_DEFAULT}/api/v1/users/by-email/${encodeURIComponent(s.email)}?t=${Date.now()}`, { cache:'no-store' })
                                 const ujson = ur.ok ? await ur.json() : null
                                 const uid = ujson?.id || s.user_id
-                                const res = await fetch(`${API_BASE_DEFAULT}/api/v1/users/${uid}/notifications`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ title, message }) })
+                                const res = await fetch(`/api/notifications/send`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ user_id: uid, title, message }) })
                                 if (!res.ok) alert('Failed to send message')
                               } catch { alert('Failed to send message') }
                             }}>
