@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 export async function GET(req: NextRequest) {
   try {
     const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://project-2-payz.onrender.com'
-    const res = await fetch(`${API_BASE}/api/v1/tpo/pending-profiles?t=${Date.now()}`, {
+    const res = await fetch(`${API_BASE}/api/v1/users/tpo/pending-profiles?t=${Date.now()}`, {
       method: 'GET',
       cache: 'no-store',
       headers: { 'Content-Type': 'application/json' },
