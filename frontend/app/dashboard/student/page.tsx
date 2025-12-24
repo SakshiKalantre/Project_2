@@ -175,7 +175,7 @@ export default function StudentDashboard() {
           }
           try { if (typeof window !== 'undefined') localStorage.setItem('currentUser', JSON.stringify({ email: userData.email, id: userData.id, role: 'STUDENT' })) } catch {}
           try {
-            const filesRes = await fetch(`${API_BASE}/api/v1/files/by-user/${userData.id}`)
+            const filesRes = await fetch(`/api/files/by-user/${userData.id}`, { cache:'no-store' })
             if (filesRes.ok) {
               const files = await filesRes.json()
               setUserFiles(files)
@@ -424,7 +424,7 @@ export default function StudentDashboard() {
       if (!res.ok) throw new Error('Failed to upload resume')
       try {
         if (userId) {
-          const filesRes = await fetch(`${API_BASE}/api/v1/files/by-user/${userId}`)
+          const filesRes = await fetch(`/api/files/by-user/${userId}`, { cache:'no-store' })
           if (filesRes.ok) {
             const files = await filesRes.json()
             setUserFiles(files)
@@ -446,7 +446,7 @@ export default function StudentDashboard() {
       if (!res.ok) throw new Error('Failed to upload certificate')
       try {
         if (userId) {
-          const filesRes = await fetch(`${API_BASE}/api/v1/files/by-user/${userId}`)
+          const filesRes = await fetch(`/api/files/by-user/${userId}`, { cache:'no-store' })
           if (filesRes.ok) {
             const files = await filesRes.json()
             setUserFiles(files)
@@ -685,12 +685,12 @@ export default function StudentDashboard() {
                             const f=e.target.files?.[0]||null;
                             if (!f) { setResumeFile(null); return }
                             if (f.type !== 'application/pdf') { alert('Only PDF files are accepted'); e.currentTarget.value=''; setResumeFile(null); return }
-                            if (f.size > 500*1024) { alert('Max file size is 500 KB'); e.currentTarget.value=''; setResumeFile(null); return }
+                            if (f.size > 10*1024*1024) { alert('Max file size is 10 MB'); e.currentTarget.value=''; setResumeFile(null); return }
                             setResumeFile(f)
                           }} />
                           <Button size="sm" onClick={()=>handleResumeUpload(resumeFile)} className="bg-maroon hover:bg-maroon/90">Upload</Button>
                         </div>
-                        <p className="text-xs text-gray-600 mt-1">Note: Only PDF files up to 500 KB are accepted.</p>
+                        <p className="text-xs text-gray-600 mt-1">Note: Only PDF files up to 10 MB are accepted.</p>
                         {resumeProgress > 0 && (
                           <div className="mt-2 h-2 w-full bg-gray-200 rounded">
                             <div className="h-2 bg-maroon rounded" style={{ width: `${resumeProgress}%` }} />

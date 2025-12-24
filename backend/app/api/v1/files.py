@@ -253,7 +253,7 @@ def list_files_by_user(user_id: int, db: Session = Depends(get_db)):
             continue
         exists = _exists_in_r2(r.file_url)
         if exists:
-            out.append({"id": r.id, "file_type": "resume", "filename": r.filename, "file_url": r.file_url})
+            out.append({"id": r.id, "file_type": "resume", "filename": r.filename, "file_url": r.file_url, "uploaded_at": getattr(r, 'uploaded_at', None)})
         else:
             db.delete(r)
     for c in certs:
@@ -261,7 +261,7 @@ def list_files_by_user(user_id: int, db: Session = Depends(get_db)):
             continue
         exists = _exists_in_r2(c.file_url)
         if exists:
-            out.append({"id": c.id, "file_type": "certificate", "title": c.title, "file_url": c.file_url})
+            out.append({"id": c.id, "file_type": "certificate", "title": c.title, "file_url": c.file_url, "uploaded_at": getattr(c, 'uploaded_at', None)})
         else:
             db.delete(c)
     db.commit()
