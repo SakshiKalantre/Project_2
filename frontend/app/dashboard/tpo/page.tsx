@@ -576,16 +576,17 @@ export default function TPODashboard() {
                             <Eye className="mr-2 h-4 w-4" />
                             View Details
                           </Button>
-                          <Button variant="outline" className="text-red-600 hover:text-red-700" onClick={async()=>{
-                            const reason = prompt('Enter rejection reason')
-                            if (!reason) return
+                          <Button variant="outline" onClick={async()=>{
+                            const title = prompt('Enter message title')
+                            if (!title) return
+                            const message = prompt('Enter message body')
+                            if (!message) return
                             try {
-                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/users/tpo/profiles/${profile.id}/reject`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ reason }) })
-                              if (res.ok) fetchTpoAndData()
-                            } catch {}
+                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/notifications`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ user_id: profile.id, title, message, notification_type: 'system' }) })
+                              if (!res.ok) alert('Failed to send message')
+                            } catch { alert('Failed to send message') }
                           }}>
-                            <X className="mr-2 h-4 w-4" />
-                            Reject
+                            Send Message
                           </Button>
                         </div>
                       </CardContent>
@@ -738,9 +739,35 @@ export default function TPODashboard() {
                         </div>
                         <div className="mt-4 flex items-center justify-between">
                           <div className="text-gray-600">Latest Resume: {s.resume_name || '—'}</div>
-                          {s.resume_id && (
-                            <Button variant="outline" onClick={()=> window.open(`${API_BASE_DEFAULT}/api/v1/files/${s.resume_id}/download`, '_blank')}>View Resume</Button>
-                          )}
+                          <div className="flex gap-2">
+                            <Button variant="outline" onClick={async()=>{
+                              try {
+                                const u = await fetch(`${API_BASE_DEFAULT}/api/v1/users/${s.user_id}?t=${Date.now()}`, { cache:'no-store' })
+                                const p = await fetch(`${API_BASE_DEFAULT}/api/v1/users/${s.user_id}/profile?t=${Date.now()}`, { cache:'no-store' })
+                                const ujson = u.ok ? await u.json() : null
+                                const pjson = p.ok ? await p.json() : null
+                                alert(`Name: ${ujson?.first_name||''} ${ujson?.last_name||''}\nEmail: ${ujson?.email}\nPhone: ${pjson?.phone||'—'}\nDegree: ${pjson?.degree||'—'}\nYear: ${pjson?.year||'—'}\nSkills: ${pjson?.skills||'—'}\nAbout: ${pjson?.about||'—'}`)
+                              } catch {}
+                            }}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              View Details
+                            </Button>
+                            <Button variant="outline" onClick={async()=>{
+                              const title = prompt('Enter message title')
+                              if (!title) return
+                              const message = prompt('Enter message body')
+                              if (!message) return
+                              try {
+                                const res = await fetch(`${API_BASE_DEFAULT}/api/v1/notifications`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ user_id: s.user_id, title, message, notification_type: 'system' }) })
+                                if (!res.ok) alert('Failed to send message')
+                              } catch { alert('Failed to send message') }
+                            }}>
+                              Send Message
+                            </Button>
+                            {s.resume_id && (
+                              <Button variant="outline" onClick={()=> window.open(`${API_BASE_DEFAULT}/api/v1/files/${s.resume_id}/download`, '_blank')}>View Resume</Button>
+                            )}
+                          </div>
                         </div>
                       </CardContent>
                     </Card>

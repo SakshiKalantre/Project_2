@@ -201,7 +201,7 @@ export default function StudentDashboard() {
 
         try {
           if (uidLocal) {
-            const notifRes = await fetch(`${API_BASE}/api/v1/users/${uidLocal}/notifications`)
+            const notifRes = await fetch(`/api/notifications/by-user/${uidLocal}`, { cache:'no-store' })
             if (notifRes.ok) {
               const notif = await notifRes.json()
               setNotifications(notif.map((n:any)=>({ id: n.id, title: n.title, message: n.message, time: new Date(n.created_at).toLocaleString(), read: n.is_read })))
@@ -220,7 +220,7 @@ export default function StudentDashboard() {
     const refreshNotifications = async () => {
       try {
         if (activeTab === 'notifications' && userId) {
-          const res = await fetch(`${API_BASE}/api/v1/users/${userId}/notifications`)
+          const res = await fetch(`/api/notifications/by-user/${userId}`, { cache:'no-store' })
           if (res.ok) {
             const rows = await res.json()
             setNotifications(rows.map((n:any)=>({ id: n.id, title: n.title, message: n.message, time: new Date(n.created_at).toLocaleString(), read: n.is_read })))

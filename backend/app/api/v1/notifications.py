@@ -16,6 +16,11 @@ def create_notification(notification: NotificationCreate, db: Session = Depends(
     db.refresh(db_notification)
     return db_notification
 
+@router.get("/by-user/{user_id}", response_model=List[NotificationResponse])
+def get_notifications_by_user(user_id: int, db: Session = Depends(get_db)):
+    notifications = db.query(Notification).filter(Notification.user_id == user_id).order_by(Notification.created_at.desc()).all()
+    return notifications
+
 @router.get("/", response_model=List[NotificationResponse])
 def get_notifications(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     notifications = db.query(Notification).offset(skip).limit(limit).all()
