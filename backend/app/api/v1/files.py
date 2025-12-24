@@ -201,6 +201,9 @@ def _key_from_url(file_url: str) -> str:
     return path
 
 def _exists_in_r2(file_url: str) -> bool:
+    # If storage is not configured, assume files exist (do not purge DB rows)
+    if not settings.R2_ENDPOINT or not settings.R2_BUCKET_NAME:
+        return True
     try:
         s3 = get_s3()
         key = _key_from_url(file_url)
@@ -254,16 +257,14 @@ def list_files_by_user(user_id: int, db: Session = Depends(get_db)):
         exists = _exists_in_r2(r.file_url)
         if exists:
             out.append({"id": r.id, "file_type": "resume", "filename": r.filename, "file_url": r.file_url, "uploaded_at": getattr(r, 'uploaded_at', None)})
-        else:
-            db.delete(r)
+        # Do not delete DB records during listing; storage availability may be transient
     for c in certs:
         if not c.file_url:
             continue
         exists = _exists_in_r2(c.file_url)
         if exists:
             out.append({"id": c.id, "file_type": "certificate", "title": c.title, "file_url": c.file_url, "uploaded_at": getattr(c, 'uploaded_at', None)})
-        else:
-            db.delete(c)
+        # Do not delete DB records during listing; storage availability may be transient
     db.commit()
     out.sort(key=lambda x: x.get('uploaded_at', 0), reverse=True)
     return out
