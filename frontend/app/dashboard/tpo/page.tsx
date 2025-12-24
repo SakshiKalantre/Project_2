@@ -56,6 +56,8 @@ export default function TPODashboard() {
   const [openEventId, setOpenEventId] = useState<number | null>(null)
   const [eventRegs, setEventRegs] = useState<Array<any>>([])
   const [eventFilter, setEventFilter] = useState<'Upcoming'|'Completed'|'Cancelled'|'All'>('Upcoming')
+  const [openDetailsUserId, setOpenDetailsUserId] = useState<number | null>(null)
+  const [detailData, setDetailData] = useState<any>(null)
 
   const fetchTpoAndData = async () => {
     try {
@@ -294,8 +296,20 @@ export default function TPODashboard() {
 
   const handleApproveProfile = async (userId: number) => {
     try {
-      const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/profiles/${userId}/approve`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ notes: 'Approved by TPO' }) })
+      const res = await fetch(`${API_BASE_DEFAULT}/api/v1/users/tpo/profiles/${userId}/approve`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ notes: 'Approved by TPO' }) })
       fetchTpoAndData()
+    } catch {}
+  }
+
+  const handleViewDetails = async (userId: number) => {
+    try {
+      if (openDetailsUserId === userId) { setOpenDetailsUserId(null); setDetailData(null); return }
+      const u = await fetch(`${API_BASE_DEFAULT}/api/v1/users/${userId}?t=${Date.now()}`, { cache:'no-store' })
+      const p = await fetch(`${API_BASE_DEFAULT}/api/v1/users/${userId}/profile?t=${Date.now()}`, { cache:'no-store' })
+      const ujson = u.ok ? await u.json() : null
+      const pjson = p.ok ? await p.json() : null
+      setDetailData({ user: ujson, profile: pjson })
+      setOpenDetailsUserId(userId)
     } catch {}
   }
 
@@ -521,7 +535,7 @@ export default function TPODashboard() {
                             <Check className="mr-2 h-4 w-4" />
                             Approve
                           </Button>
-                          <Button variant="outline">
+                          <Button variant="outline" onClick={()=>handleViewDetails(profile.id)}>
                             <Eye className="mr-2 h-4 w-4" />
                             View Details
                           </Button>
@@ -538,6 +552,40 @@ export default function TPODashboard() {
                           </Button>
                         </div>
                       </CardContent>
+                      {openDetailsUserId === profile.id && (
+                        <div className="px-6 pb-6 text-sm text-gray-700">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <span className="font-semibold">Full Name</span>
+                              <p>{`${detailData?.user?.first_name || ''} ${detailData?.user?.last_name || ''}`.trim() || profile.name}</p>
+                            </div>
+                            <div>
+                              <span className="font-semibold">Registered Email</span>
+                              <p>{detailData?.user?.email || profile.email}</p>
+                            </div>
+                            <div>
+                              <span className="font-semibold">Phone</span>
+                              <p>{detailData?.profile?.phone || 'Not provided'}</p>
+                            </div>
+                            <div>
+                              <span className="font-semibold">Degree</span>
+                              <p>{detailData?.profile?.degree || 'Not provided'}</p>
+                            </div>
+                            <div>
+                              <span className="font-semibold">Year</span>
+                              <p>{detailData?.profile?.year || 'Not provided'}</p>
+                            </div>
+                            <div>
+                              <span className="font-semibold">Skills</span>
+                              <p>{detailData?.profile?.skills || 'Not provided'}</p>
+                            </div>
+                            <div className="md:col-span-2">
+                              <span className="font-semibold">About</span>
+                              <p>{detailData?.profile?.about || 'Not provided'}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </Card>
                   ))}
                   {pendingProfiles.length === 0 && (
