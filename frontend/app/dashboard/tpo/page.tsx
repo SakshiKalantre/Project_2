@@ -112,7 +112,7 @@ export default function TPODashboard() {
           }
         }))
       }
-      const pr = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/pending-resumes`)
+      const pr = await fetch(`${API_BASE_DEFAULT}/api/v1/files/tpo/pending-resumes`)
       if (pr.ok) {
         const rows = await pr.json()
         setPendingResumes(rows.map((r:any)=>({
@@ -124,7 +124,7 @@ export default function TPODashboard() {
           status: r.is_verified ? 'Verified' : 'Pending'
         })))
       }
-      const vr = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/verified-resumes`)
+      const vr = await fetch(`${API_BASE_DEFAULT}/api/v1/files/tpo/verified-resumes`)
       if (vr.ok) {
         const rows = await vr.json()
         setVerifiedResumes(rows.map((r:any)=>({
@@ -315,7 +315,7 @@ export default function TPODashboard() {
 
   const handleApproveResume = async (fileId: number) => {
     try {
-      await fetch(`${API_BASE_DEFAULT}/api/v1/files/${fileId}/verify`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_verified: true, verified_by: tpoUserId, verification_notes: 'Verified by TPO' }) })
+      await fetch(`${API_BASE_DEFAULT}/api/v1/files/resumes/${fileId}/verify`, { method: 'PUT' })
       fetchTpoAndData()
     } catch {}
   }
@@ -665,7 +665,7 @@ export default function TPODashboard() {
                             const reason = prompt('Enter rejection reason')
                             if (!reason) return
                             try {
-                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/files/${resume.id}/reject`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ reason }) })
+                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/files/resumes/${resume.id}/reject`, { method:'PUT' })
                               if (res.ok) fetchTpoAndData()
                             } catch {}
                           }}>

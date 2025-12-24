@@ -267,3 +267,54 @@ def list_files_by_user(user_id: int, db: Session = Depends(get_db)):
     db.commit()
     out.sort(key=lambda x: x.get('uploaded_at', 0), reverse=True)
     return out
+
+# TPO views for resumes
+@router.get("/tpo/pending-resumes")
+def tpo_pending_resumes(db: Session = Depends(get_db)):
+    rows = db.query(Resume).filter(Resume.is_verified == False).all()
+    return [
+        {
+            "id": r.id,
+            "user_id": r.user_id,
+            "file_name": r.filename,
+            "file_url": r.file_url,
+            "is_verified": r.is_verified,
+            "uploaded_at": getattr(r, 'uploaded_at', None),
+        }
+        for r in rows
+    ]
+
+@router.get("/tpo/verified-resumes")
+def tpo_verified_resumes(db: Session = Depends(get_db)):
+    rows = db.query(Resume).filter(Resume.is_verified == True).all()
+    return [
+        {
+            "id": r.id,
+            "user_id": r.user_id,
+            "file_name": r.filename,
+            "file_url": r.file_url,
+            "is_verified": r.is_verified,
+            "uploaded_at": getattr(r, 'uploaded_at', None),
+        }
+        for r in rows
+    ]
+
+@router.put("/resumes/{resume_id}/verify")
+def verify_resume(resume_id: int, db: Session = Depends(get_db)):
+    r = db.query(Resume).filter(Resume.id == resume_id).first()
+    if not r:
+        raise HTTPException(status_code=404, detail="Resume not found")
+    r.is_verified = True
+    db.commit()
+    db.refresh(r)
+    return {"id": r.id, "is_verified": True}
+
+@router.put("/resumes/{resume_id}/reject")
+def reject_resume(resume_id: int, db: Session = Depends(get_db)):
+    r = db.query(Resume).filter(Resume.id == resume_id).first()
+    if not r:
+        raise HTTPException(status_code=404, detail="Resume not found")
+    r.is_verified = False
+    db.commit()
+    db.refresh(r)
+    return {"id": r.id, "is_verified": False}

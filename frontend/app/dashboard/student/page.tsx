@@ -674,25 +674,7 @@ export default function StudentDashboard() {
                         </CardContent>
                       </Card>
                       
-                      <Card>
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center">
-                              <FileText className="h-8 w-8 text-maroon mr-3" />
-                              <div>
-                                <h4 className="font-medium">Certificates</h4>
-                                <p className="text-sm text-gray-500">{userFiles.filter(f=>f.file_type==='certificate').length} files</p>
-                              </div>
-                            </div>
-                            <Button size="sm" variant="outline" onClick={()=>{
-                              const latest = userFiles.find((x)=> x.file_type==='certificate')
-                              if (latest) {
-                                openFile(latest.id)
-                              } else alert('No certificate uploaded yet')
-                            }}>View</Button>
-                          </div>
-                        </CardContent>
-                      </Card>
+                      
                     </div>
                     
                     <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -716,32 +698,13 @@ export default function StudentDashboard() {
                           </div>
                         )}
                       </div>
-                      <div>
-                        <Label htmlFor="certUpload">Upload Certificate</Label>
-                        <div className="mt-2 flex items-center gap-2">
-                          <input id="certUpload" type="file" onChange={(e)=>{
-                            const f=e.target.files?.[0]||null;
-                            if (!f) { setCertificateFile(null); return }
-                            if (f.type !== 'application/pdf') { alert('Only PDF files are accepted'); e.currentTarget.value=''; setCertificateFile(null); return }
-                            if (f.size > 500*1024) { alert('Max file size is 500 KB'); e.currentTarget.value=''; setCertificateFile(null); return }
-                            setCertificateFile(f)
-                          }} />
-                          <Button size="sm" variant="outline" onClick={()=>handleCertificateUpload(certificateFile, certificateFile?.name || '')}>Submit</Button>
-                        </div>
-                        <p className="text-xs text-gray-600 mt-1">Note: Only PDF files up to 500 KB are accepted. Upload all certificates in one PDF file only.</p>
-                        {certProgress > 0 && (
-                          <div className="mt-2 h-2 w-full bg-gray-200 rounded">
-                            <div className="h-2 bg-gold rounded" style={{ width: `${certProgress}%` }} />
-                            <p className="text-xs text-gray-600 mt-1">{certProgress}%</p>
-                          </div>
-                        )}
-                      </div>
+                      
                     </div>
 
                     <div className="mt-6">
                       <h4 className="font-medium mb-2">Your Uploaded Files</h4>
                       <div className="space-y-2">
-                        {userFiles.map((f)=> (
+                        {userFiles.filter(f=>f.file_type==='resume').map((f)=> (
                           <div key={f.id} className="flex items-center justify-between text-sm">
                             <span>{f.filename || f.title} <span className="ml-2 text-gray-500">({f.file_type})</span></span>
                             <div className="flex items-center gap-2">
@@ -749,22 +712,9 @@ export default function StudentDashboard() {
                             </div>
                           </div>
                         ))}
-                        {userFiles.length === 0 && <p className="text-gray-500 text-sm">No files uploaded yet</p>}
+                        {userFiles.filter(f=>f.file_type==='resume').length === 0 && <p className="text-gray-500 text-sm">No resumes uploaded yet</p>}
                       </div>
-                      <div className="mt-4">
-                        <h5 className="font-medium">Certificates</h5>
-                        <div className="space-y-2 mt-2">
-                          {userFiles.filter(f=>f.file_type==='certificate').map(f=> (
-                            <div key={f.id} className="flex items-center justify-between text-sm">
-                              <span>{f.title || f.filename}</span>
-                              <Button size="sm" variant="outline" onClick={()=> openFile(f.id)}>Open</Button>
-                            </div>
-                          ))}
-                          {userFiles.filter(f=>f.file_type==='certificate').length===0 && (
-                            <p className="text-gray-500 text-sm">No certificates uploaded yet</p>
-                          )}
-                        </div>
-                      </div>
+                      
                     </div>
                   </div>
                 </CardContent>
