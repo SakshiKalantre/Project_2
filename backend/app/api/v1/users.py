@@ -92,6 +92,8 @@ def create_user_profile(user_id: int, profile: ProfileCreate, db: Session = Depe
         update_data = profile.dict(exclude_unset=True)
         for key, value in update_data.items():
             setattr(db_profile, key, value)
+        # Any edit requires re-approval
+        db_profile.is_approved = False
         db.commit()
         db.refresh(db_profile)
     else:
@@ -131,6 +133,8 @@ def update_user_profile(user_id: int, profile_update: ProfileUpdate, db: Session
     update_data = profile_update.dict(exclude_unset=True)
     for key, value in update_data.items():
         setattr(db_profile, key, value)
+    # Any edit requires re-approval
+    db_profile.is_approved = False
     db.commit()
     db.refresh(db_profile)
     # Update user's profile_complete flag
@@ -288,3 +292,43 @@ def tpo_approve_profile(user_id: int, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(db_user)
     return { "user_id": user_id, "is_approved": True }
+
+@router.put("/tpo/profiles/{user_id}/reject")
+def tpo_reject_profile(user_id: int, reason: dict | None = None, db: Session = Depends(get_db)):
+    db_profile = db.query(Profile).filter(Profile.user_id == user_id).first()
+    if not db_profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    db_profile.is_approved = False
+    if reason and isinstance(reason, dict):
+        db_profile.approval_notes = reason.get('reason') or db_profile.approval_notes
+    db.commit()
+    db.refresh(db_profile)
+    db_user = db.query(User).filter(User.id == user_id).first()
+    if db_user:
+        db_user.is_approved = False
+        db.commit()
+        db.refresh(db_user)
+    return { "user_id": user_id, "is_approved": False }
+
+# TPO: Approved students list
+@router.get("/tpo/approved-students")
+def tpo_approved_students(db: Session = Depends(get_db)):
+    rows_raw = (
+        db.query(User, Profile)
+        .join(Profile, Profile.user_id == User.id)
+        .filter(User.role == UserRole.STUDENT)
+        .filter(User.is_approved == True)
+        .filter(Profile.is_approved == True)
+        .all()
+    )
+    rows = []
+    for u, p in rows_raw:
+        rows.append({
+            "user_id": u.id,
+            "first_name": u.first_name,
+            "last_name": u.last_name,
+            "email": u.email,
+            "degree": p.degree,
+            "year": p.year,
+        })
+    return rows
