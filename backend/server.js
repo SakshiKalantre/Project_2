@@ -679,16 +679,16 @@ app.post('/api/v1/users/:user_id/profile', async (req, res) => {
   try {
     const userCheck = await dbClient.query('SELECT id FROM users WHERE id = $1', [userId]);
     if (userCheck.rows.length === 0) return res.status(404).json({ error: 'User not found' });
-    await dbClient.query(
+  await dbClient.query(
       `INSERT INTO profiles (user_id, phone, degree, year, skills, about, alternate_email, is_approved, created_at, updated_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, false, NOW(), NOW())
        ON CONFLICT (user_id)
-       DO UPDATE SET phone = EXCLUDED.phone, degree = EXCLUDED.degree, year = EXCLUDED.year, skills = EXCLUDED.skills, about = EXCLUDED.about, alternate_email = EXCLUDED.alternate_email, updated_at = NOW()`,
+       DO UPDATE SET phone = EXCLUDED.phone, degree = EXCLUDED.degree, year = EXCLUDED.year, skills = EXCLUDED.skills, about = EXCLUDED.about, alternate_email = EXCLUDED.alternate_email, is_approved = FALSE, updated_at = NOW()`,
       [userId, phone || null, degree || null, year || null, skills || null, about || null, alternate_email || null]
     );
     const isComplete = [phone, degree, year, skills, about, alternate_email]
       .every(v => v != null && String(v).trim() !== '');
-    await dbClient.query('UPDATE users SET profile_complete = $2, updated_at = NOW() WHERE id = $1', [userId, isComplete]);
+    await dbClient.query('UPDATE users SET profile_complete = $2, is_approved = FALSE, updated_at = NOW() WHERE id = $1', [userId, isComplete]);
     const result = await dbClient.query('SELECT id, user_id, phone, degree, year, skills, about, alternate_email, is_approved FROM profiles WHERE user_id = $1', [userId]);
     res.json(result.rows[0]);
   } catch (error) {
