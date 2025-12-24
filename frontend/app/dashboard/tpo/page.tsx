@@ -582,7 +582,7 @@ export default function TPODashboard() {
                             const message = prompt('Enter message body')
                             if (!message) return
                             try {
-                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/notifications`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ user_id: profile.id, title, message, notification_type: 'system' }) })
+                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/users/${profile.id}/notifications`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ title, message }) })
                               if (!res.ok) alert('Failed to send message')
                             } catch { alert('Failed to send message') }
                           }}>
@@ -740,25 +740,30 @@ export default function TPODashboard() {
                         <div className="mt-4 flex items-center justify-between">
                           <div className="text-gray-600">Latest Resume: {s.resume_name || '—'}</div>
                           <div className="flex gap-2">
-                            <Button variant="outline" onClick={async()=>{
-                              try {
-                                const u = await fetch(`${API_BASE_DEFAULT}/api/v1/users/${s.user_id}?t=${Date.now()}`, { cache:'no-store' })
-                                const p = await fetch(`${API_BASE_DEFAULT}/api/v1/users/${s.user_id}/profile?t=${Date.now()}`, { cache:'no-store' })
-                                const ujson = u.ok ? await u.json() : null
-                                const pjson = p.ok ? await p.json() : null
-                                alert(`Name: ${ujson?.first_name||''} ${ujson?.last_name||''}\nEmail: ${ujson?.email}\nPhone: ${pjson?.phone||'—'}\nDegree: ${pjson?.degree||'—'}\nYear: ${pjson?.year||'—'}\nSkills: ${pjson?.skills||'—'}\nAbout: ${pjson?.about||'—'}`)
-                              } catch {}
-                            }}>
-                              <Eye className="mr-2 h-4 w-4" />
-                              View Details
-                            </Button>
+                          <Button variant="outline" onClick={async()=>{
+                            try {
+                              // Resolve user by email to avoid mismatches
+                              const ur = await fetch(`${API_BASE_DEFAULT}/api/v1/users/by-email/${encodeURIComponent(s.email)}?t=${Date.now()}`, { cache:'no-store' })
+                              const ujson = ur.ok ? await ur.json() : null
+                              const uid = ujson?.id || s.user_id
+                              const pr = await fetch(`${API_BASE_DEFAULT}/api/v1/users/${uid}/profile?t=${Date.now()}`, { cache:'no-store' })
+                              const pjson = pr.ok ? await pr.json() : null
+                              alert(`Name: ${ujson?.first_name||s.first_name||''} ${ujson?.last_name||s.last_name||''}\nEmail: ${ujson?.email||s.email}\nPhone: ${pjson?.phone||'—'}\nDegree: ${pjson?.degree||'—'}\nYear: ${pjson?.year||'—'}\nSkills: ${pjson?.skills||'—'}\nAbout: ${pjson?.about||'—'}`)
+                            } catch {}
+                          }}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            View Details
+                          </Button>
                             <Button variant="outline" onClick={async()=>{
                               const title = prompt('Enter message title')
                               if (!title) return
                               const message = prompt('Enter message body')
                               if (!message) return
                               try {
-                                const res = await fetch(`${API_BASE_DEFAULT}/api/v1/notifications`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ user_id: s.user_id, title, message, notification_type: 'system' }) })
+                                const ur = await fetch(`${API_BASE_DEFAULT}/api/v1/users/by-email/${encodeURIComponent(s.email)}?t=${Date.now()}`, { cache:'no-store' })
+                                const ujson = ur.ok ? await ur.json() : null
+                                const uid = ujson?.id || s.user_id
+                                const res = await fetch(`${API_BASE_DEFAULT}/api/v1/users/${uid}/notifications`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ title, message }) })
                                 if (!res.ok) alert('Failed to send message')
                               } catch { alert('Failed to send message') }
                             }}>
