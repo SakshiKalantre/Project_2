@@ -582,8 +582,9 @@ export default function TPODashboard() {
                             const message = prompt('Enter message body')
                             if (!message) return
                             try {
-                              const res = await fetch(`/api/notifications/send`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ user_id: profile.id, title, message }) })
+                              const res = await fetch(`/api/notifications/send`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ user_id: profile.id, email: profile.email, title, message }) })
                               if (!res.ok) alert('Failed to send message')
+                              else alert('Message sent')
                             } catch { alert('Failed to send message') }
                           }}>
                             Send Message
@@ -760,11 +761,9 @@ export default function TPODashboard() {
                               const message = prompt('Enter message body')
                               if (!message) return
                               try {
-                                const ur = await fetch(`${API_BASE_DEFAULT}/api/v1/users/by-email/${encodeURIComponent(s.email)}?t=${Date.now()}`, { cache:'no-store' })
-                                const ujson = ur.ok ? await ur.json() : null
-                                const uid = ujson?.id || s.user_id
-                                const res = await fetch(`/api/notifications/send`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ user_id: uid, title, message }) })
+                                const res = await fetch(`/api/notifications/send`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ user_id: s.user_id, email: s.email, title, message }) })
                                 if (!res.ok) alert('Failed to send message')
+                                else alert('Message sent')
                               } catch { alert('Failed to send message') }
                             }}>
                               Send Message

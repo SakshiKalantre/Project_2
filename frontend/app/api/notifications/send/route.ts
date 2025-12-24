@@ -5,12 +5,20 @@ export const dynamic = 'force-dynamic'
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { user_id, title, message } = body || {}
-    if (!user_id || !title || !message) {
-      return NextResponse.json({ error: 'Missing user_id, title or message' }, { status: 400 })
+    const { user_id, title, message, email } = body || {}
+    if ((!user_id && !email) || !title || !message) {
+      return NextResponse.json({ error: 'Missing user_id/email, title or message' }, { status: 400 })
     }
     const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://project-2-payz.onrender.com'
-    let res = await fetch(`${API_BASE}/api/v1/users/${encodeURIComponent(user_id)}/notifications`, {
+    let targetId = user_id
+    if (!targetId && email) {
+      const ur = await fetch(`${API_BASE}/api/v1/users/by-email/${encodeURIComponent(email)}?t=${Date.now()}`, { cache:'no-store' })
+      if (ur.ok) {
+        const ujson = await ur.json()
+        targetId = ujson?.id
+      }
+    }
+    let res = await fetch(`${API_BASE}/api/v1/users/${encodeURIComponent(targetId)}/notifications`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title, message })
@@ -20,7 +28,7 @@ export async function POST(req: Request) {
       res = await fetch(`${API_BASE}/api/v1/notifications`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id, title, message, notification_type: 'system' })
+        body: JSON.stringify({ user_id: targetId, title, message, notification_type: 'system' })
       })
     }
     const text = await res.text()
