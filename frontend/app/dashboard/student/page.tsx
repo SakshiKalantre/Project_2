@@ -277,7 +277,6 @@ export default function StudentDashboard() {
     try {
       if (!userId) return
       const cleanName = (profile.name || '').trim().replace(/\s+/g, ' ')
-      if (!cleanName) { setIsEditing(false); return }
       const parts = cleanName.split(' ')
       const firstName = parts[0] || ''
       const lastName = parts.slice(1).join(' ')
@@ -294,11 +293,19 @@ export default function StudentDashboard() {
           
         })
       })
-      await fetch(`${API_BASE}/api/v1/users/${userId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ first_name: firstName || null, last_name: lastName || null, phone_number: profile.phone || null })
-      })
+      if (cleanName) {
+        await fetch(`${API_BASE}/api/v1/users/${userId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ first_name: firstName || null, last_name: lastName || null, phone_number: profile.phone || null })
+        })
+      } else {
+        await fetch(`${API_BASE}/api/v1/users/${userId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone_number: profile.phone || null })
+        })
+      }
       const refreshed = await fetch(`${API_BASE}/api/v1/users/${userId}?t=${Date.now()}`, { cache: 'no-store' })
       if (refreshed.ok) {
         const u = await refreshed.json()
