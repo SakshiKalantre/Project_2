@@ -136,7 +136,7 @@ export default function TPODashboard() {
           status: 'Verified'
         })))
       }
-      const aps = await fetch(`${API_BASE_DEFAULT}/api/v1/users/tpo/approved-students`)
+      const aps = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/approved-students`)
       if (aps.ok) {
         const rows = await aps.json()
         setApprovedStudents(rows)
@@ -333,7 +333,7 @@ export default function TPODashboard() {
 
   const handleApproveProfile = async (userId: number) => {
     try {
-      const res = await fetch(`${API_BASE_DEFAULT}/api/v1/users/tpo/profiles/${userId}/approve`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ notes: 'Approved by TPO' }) })
+      const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/profiles/${userId}/approve`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ notes: 'Approved by TPO' }) })
       fetchTpoAndData()
     } catch {}
   }
@@ -580,7 +580,7 @@ export default function TPODashboard() {
                             const reason = prompt('Enter rejection reason')
                             if (!reason) return
                             try {
-                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/users/tpo/profiles/${profile.id}/reject`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ reason }) })
+                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/profiles/${profile.id}/reject`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ reason }) })
                               if (res.ok) fetchTpoAndData()
                             } catch {}
                           }}>
