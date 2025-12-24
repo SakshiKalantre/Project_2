@@ -5,7 +5,12 @@ export const dynamic = 'force-dynamic'
 export async function GET(_: Request, { params }: any) {
   try {
     const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://project-2-payz.onrender.com'
-    const res = await fetch(`${API_BASE}/api/v1/notifications/by-user/${encodeURIComponent(params.user_id)}?t=${Date.now()}`, { cache:'no-store' })
+    // Try Node backend route first
+    let res = await fetch(`${API_BASE}/api/v1/users/${encodeURIComponent(params.user_id)}/notifications?t=${Date.now()}`, { cache:'no-store' })
+    if (!res.ok) {
+      // Fallback to FastAPI
+      res = await fetch(`${API_BASE}/api/v1/notifications/by-user/${encodeURIComponent(params.user_id)}?t=${Date.now()}`, { cache:'no-store' })
+    }
     const text = await res.text()
     return new NextResponse(text, { status: res.status, headers: { 'Content-Type': res.headers.get('Content-Type') || 'application/json' } })
   } catch (e: any) {
