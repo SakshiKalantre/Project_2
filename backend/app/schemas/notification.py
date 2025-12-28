@@ -5,7 +5,7 @@ from datetime import datetime
 class NotificationBase(BaseModel):
     title: str
     message: str
-    recipient_id: int
+    user_id: int
 
 class NotificationCreate(NotificationBase):
     pass

@@ -10,7 +10,8 @@ router = APIRouter()
 
 @router.post("/", response_model=NotificationResponse)
 def create_notification(notification: NotificationCreate, db: Session = Depends(get_db)):
-    db_notification = Notification(**notification.dict())
+    data = notification.dict()
+    db_notification = Notification(user_id=data.get('user_id'), title=data.get('title'), message=data.get('message'))
     db.add(db_notification)
     db.commit()
     db.refresh(db_notification)
