@@ -1,10 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
+import os
+import smtplib
+import ssl
+from email.message import EmailMessage
 
 from app.db.session import get_db
 from app.models.notification import Notification
+from app.models.user import User
 from app.schemas.notification import NotificationCreate, NotificationResponse, NotificationUpdate
+from app.core.config import settings
 
 router = APIRouter()
 
@@ -15,6 +21,12 @@ def create_notification(notification: NotificationCreate, db: Session = Depends(
     db.add(db_notification)
     db.commit()
     db.refresh(db_notification)
+    try:
+        user = db.query(User).filter(User.id == data.get('user_id')).first()
+        if user:
+            _send_email(user.email, data.get('title') or 'Message from TPO', data.get('message') or '')
+    except Exception:
+        pass
     return db_notification
 
 @router.get("/by-user/{user_id}", response_model=List[NotificationResponse])
@@ -57,3 +69,36 @@ def delete_notification(notification_id: int, db: Session = Depends(get_db)):
     db.delete(db_notification)
     db.commit()
     return {"message": "Notification deleted successfully"}
+def _send_email(to_email: str, subject: str, body: str) -> bool:
+    host = settings.SMTP_HOST or os.getenv('SMTP_HOST', '')
+    user = settings.SMTP_USER or os.getenv('SMTP_USER', '')
+    pwd = settings.SMTP_PASS or os.getenv('SMTP_PASS', '')
+    from_addr = settings.SMTP_FROM or os.getenv('SMTP_FROM', '') or user
+    try:
+        port = int(settings.SMTP_PORT or int(os.getenv('SMTP_PORT', '587')))
+    except Exception:
+        port = 587
+    if not host or not user or not pwd or not to_email:
+        return False
+    try:
+        msg = EmailMessage()
+        msg['From'] = from_addr
+        msg['To'] = to_email
+        msg['Subject'] = subject or 'Message from TPO'
+        msg.set_content(body or '')
+        if port == 465:
+            context = ssl.create_default_context()
+            with smtplib.SMTP_SSL(host, port, context=context) as server:
+                server.login(user, pwd)
+                server.send_message(msg)
+        else:
+            with smtplib.SMTP(host, port) as server:
+                server.ehlo()
+                server.starttls()
+                server.login(user, pwd)
+                server.send_message(msg)
+        return True
+    except Exception as e:
+        # Log only; do not raise to keep API success
+        print(f"Email send failed: {e}")
+        return False

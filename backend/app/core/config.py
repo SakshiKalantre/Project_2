@@ -30,6 +30,13 @@ class Settings(BaseSettings):
     R2_BUCKET_NAME: str = ""
     R2_PUBLIC_BASE_URL: str = ""  # e.g., https://cdn.example.com or https://<bucket>.<accountid>.r2.cloudflarestorage.com
     
+    # SMTP for email notifications
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASS: str = ""
+    SMTP_FROM: str = ""
+    
     class Config:
         case_sensitive = True
         env_file = ".env"
