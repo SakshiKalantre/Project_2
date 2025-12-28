@@ -9,6 +9,19 @@ const PDFDocument = require('pdfkit');
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
 require('dotenv').config();
+let mailer = null
+let mailTransport = null
+try {
+  mailer = require('nodemailer')
+  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+    mailTransport = mailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: parseInt(process.env.SMTP_PORT || '587'),
+      secure: false,
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+    })
+  }
+} catch {}
 
 const app = express();
 const PORT = process.env.PORT || 8001;
@@ -1160,6 +1173,17 @@ app.post('/api/v1/users/:user_id/notifications', async (req, res) => {
     const userId = parseInt(req.params.user_id)
     const { title, message } = req.body || {}
     await dbClient.query('INSERT INTO notifications (user_id, title, message, created_at, is_read) VALUES ($1,$2,$3,NOW(),FALSE)', [userId, title || null, message || null])
+    try {
+      if (mailTransport) {
+        const u = await dbClient.query('SELECT email, first_name, last_name FROM users WHERE id = $1', [userId])
+        if (u.rows.length > 0) {
+          const to = u.rows[0].email
+          const subject = title || 'Message from TPO'
+          const text = message || ''
+          await mailTransport.sendMail({ from: process.env.SMTP_FROM || process.env.SMTP_USER, to, subject, text })
+        }
+      }
+    } catch {}
     res.status(201).json({ success: true })
   } catch (error) {
     res.status(500).json({ error: 'Failed to create notification' })

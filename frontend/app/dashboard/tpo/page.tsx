@@ -590,6 +590,21 @@ export default function TPODashboard() {
                             Send Message
                           </Button>
                         </div>
+                        <div className="mt-4 text-sm text-gray-600">
+                          <div>Email: {profile.email}</div>
+                          <div className="mt-2 flex gap-2">
+                            <Textarea placeholder="Write a message..." value={(messages as any)[profile.id] || ''} onChange={(e)=>setMessages((m:any)=>({ ...m, [profile.id]: e.target.value }))} rows={2} />
+                            <Button variant="outline" onClick={async()=>{
+                              const msg = (messages as any)[profile.id] || ''
+                              if (!msg.trim()) { alert('Enter a message'); return }
+                              try {
+                                const res = await fetch(`/api/notifications/send`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ user_id: profile.id, email: profile.email, title: 'Message', message: msg }) })
+                                if (!res.ok) alert('Failed to send message')
+                                else { alert('Message sent'); setMessages((m:any)=>({ ...m, [profile.id]: '' })) }
+                              } catch { alert('Failed to send message') }
+                            }}>Send</Button>
+                          </div>
+                        </div>
                       </CardContent>
                       {openDetailsUserId === profile.id && (
                         <div className="px-6 pb-6 text-sm text-gray-700">
