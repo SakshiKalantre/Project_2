@@ -882,16 +882,19 @@ export default function StudentDashboard() {
                   <Button variant="outline" onClick={async()=>{
                     try {
                       if (!userId) return
-                      const unread = notifications.filter(n=>!n.read)
-                      await Promise.all(unread.map(n=> fetch(`${API_BASE}/api/v1/notifications/${n.id}/read`, { method:'PUT' })))
-                      const res = await fetch(`/api/notifications/by-user/${userId}`, { cache:'no-store' })
+                      const res = await fetch(`/api/notifications/read-all/${userId}`, { method:'PUT' })
                       if (res.ok) {
-                        const rows = await res.json()
-                        setNotifications(rows.map((n:any)=>({ id: n.id, title: n.title, message: n.message, time: new Date(n.created_at).toLocaleString(), read: n.is_read })))
-                      } else {
-                        setNotifications(prev=> prev.map(n=> ({ ...n, read: true })))
+                        const refresh = await fetch(`/api/notifications/by-user/${userId}`, { cache:'no-store' })
+                        if (refresh.ok) {
+                          const rows = await refresh.json()
+                          setNotifications(rows.map((n:any)=>({ id: n.id, title: n.title, message: n.message, time: new Date(n.created_at).toLocaleString(), read: n.is_read })))
+                          return
+                        }
                       }
-                    } catch {}
+                      setNotifications(prev=> prev.map(n=> ({ ...n, read: true })))
+                    } catch {
+                      setNotifications(prev=> prev.map(n=> ({ ...n, read: true })))
+                    }
                   }}>Mark all as read</Button>
                 </div>
                 

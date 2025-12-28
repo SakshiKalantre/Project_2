@@ -41,6 +41,15 @@ def get_notifications_by_user(user_id: int, db: Session = Depends(get_db)):
     notifications = db.query(Notification).filter(Notification.user_id == user_id).order_by(Notification.created_at.desc()).all()
     return notifications
 
+@router.put("/read-all/{user_id}")
+def mark_all_read(user_id: int, db: Session = Depends(get_db)):
+    try:
+        db.query(Notification).filter(Notification.user_id == user_id, Notification.is_read == False).update({ Notification.is_read: True }, synchronize_session=False)
+        db.commit()
+        return { "success": True }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to mark all read: {e}")
+
 @router.get("/", response_model=List[NotificationResponse])
 def get_notifications(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     notifications = db.query(Notification).offset(skip).limit(limit).all()
