@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -12,70 +12,120 @@ const banks: Record<string, Question[]> = {
     { type:'open', text:"How do you design scalable APIs?" },
     { type:'open', text:"Describe a time you resolved a production incident." },
     { type:'open', text:"What are your favorite testing strategies?" },
-    { type:'open', text:"Walk through code you’re proud of and why." }
+    { type:'open', text:"Walk through code you’re proud of and why." },
+    { type:'open', text:"How do you ensure code quality at scale?" },
+    { type:'open', text:"Discuss tradeoffs in choosing a framework or library." },
+    { type:'open', text:"Describe your approach to performance profiling." },
+    { type:'open', text:"Explain how you structure monorepos or multi-service projects." },
+    { type:'open', text:"Share an example of mentoring or reviewing code effectively." }
   ],
   "Backend Developer": [
     { type:'open', text:"Design a rate limiting strategy for a public API." },
     { type:'open', text:"Compare SQL vs NoSQL for a high-write workload." },
     { type:'open', text:"How would you implement idempotent operations?" },
     { type:'open', text:"Explain securing sensitive configuration secrets." },
-    { type:'open', text:"Describe your approach to database migrations." }
+    { type:'open', text:"Describe your approach to database migrations." },
+    { type:'open', text:"Discuss pagination and filtering design for large datasets." },
+    { type:'open', text:"Explain circuit breakers and backoff strategies." },
+    { type:'open', text:"How do you handle long-running jobs and retries?" },
+    { type:'open', text:"Share a strategy for schema evolution without downtime." },
+    { type:'open', text:"Describe monitoring for API latency and error budgets." }
   ],
   "Web Developer": [
     { type:'open', text:"How do you optimize web performance on slow networks?" },
     { type:'open', text:"Explain accessibility checks you include by default." },
     { type:'open', text:"Discuss your CSS architecture and naming approach." },
     { type:'open', text:"How do you prevent layout shifts and jank?" },
-    { type:'open', text:"Describe a complex UI state you managed cleanly." }
+    { type:'open', text:"Describe a complex UI state you managed cleanly." },
+    { type:'open', text:"Explain bundle splitting and code-splitting decisions." },
+    { type:'open', text:"How do you secure SPAs against XSS and CSRF?" },
+    { type:'open', text:"Discuss testing strategy for UI components and hooks." },
+    { type:'open', text:"Share your approach to internationalization and RTL." },
+    { type:'open', text:"Explain form validation and error UX best practices." }
   ],
   "Data Analyst": [
     { type:'open', text:"Share a dataset you analyzed and key insights." },
     { type:'open', text:"How do you handle missing or noisy data?" },
     { type:'open', text:"Describe a dashboard you built and decisions it enabled." },
     { type:'open', text:"Which statistical tests do you commonly use and when?" },
-    { type:'open', text:"Tell me about a time you automated reporting." }
+    { type:'open', text:"Tell me about a time you automated reporting." },
+    { type:'open', text:"Explain segmentation and cohort analysis you delivered." },
+    { type:'open', text:"Discuss causal inference pitfalls in business analytics." },
+    { type:'open', text:"How do you design KPIs and guard against vanity metrics?" },
+    { type:'open', text:"Share how you validated data lineage and freshness." },
+    { type:'open', text:"Explain effective storytelling with data to execs." }
   ],
   "ML Engineer": [
     { type:'open', text:"Describe model selection tradeoffs for a classification task." },
     { type:'open', text:"How do you monitor model drift in production?" },
     { type:'open', text:"Explain feature engineering for tabular data." },
     { type:'open', text:"Compare offline vs online evaluation approaches." },
-    { type:'open', text:"Discuss responsible AI considerations you apply." }
+    { type:'open', text:"Discuss responsible AI considerations you apply." },
+    { type:'open', text:"Explain reproducibility, versioning, and experiment tracking." },
+    { type:'open', text:"Describe serving architecture and latency targets." },
+    { type:'open', text:"How do you handle class imbalance and calibration?" },
+    { type:'open', text:"Share a time you reduced inference cost significantly." },
+    { type:'open', text:"Discuss privacy-preserving ML techniques you used." }
   ],
   "QA Engineer": [
     { type:'open', text:"How do you design test cases for edge scenarios?" },
     { type:'open', text:"Explain balancing automation vs manual testing." },
     { type:'open', text:"Describe your bug triage and prioritization method." },
     { type:'open', text:"How do you measure test coverage meaningfully?" },
-    { type:'open', text:"Share an example of improving release quality." }
+    { type:'open', text:"Share an example of improving release quality." },
+    { type:'open', text:"Discuss flaky tests and how you eliminate them." },
+    { type:'open', text:"Explain test data management strategies." },
+    { type:'open', text:"How do you integrate testing into CI/CD effectively?" },
+    { type:'open', text:"Share your approach to exploratory testing." },
+    { type:'open', text:"Describe performance testing tools and metrics." }
   ],
   "DevOps/SRE": [
     { type:'open', text:"Walk through incident response and postmortem practices." },
     { type:'open', text:"Explain capacity planning and autoscaling signals." },
     { type:'open', text:"Discuss observability pillars you implement." },
     { type:'open', text:"How do you design for high availability?" },
-    { type:'open', text:"Share an example of reliability improvements you delivered." }
+    { type:'open', text:"Share an example of reliability improvements you delivered." },
+    { type:'open', text:"Explain error budgets and SLOs with practical examples." },
+    { type:'open', text:"Discuss deployment strategies (blue/green, canary)." },
+    { type:'open', text:"How do you manage secrets and rotate keys?" },
+    { type:'open', text:"Share how you reduced infra cost while improving reliability." },
+    { type:'open', text:"Describe backup/restore drills and RTO/RPO targets." }
   ],
   "Cybersecurity": [
     { type:'open', text:"Explain a threat model you created and mitigations." },
     { type:'open', text:"How do you manage secrets and key rotation?" },
     { type:'open', text:"Describe secure coding practices you enforce." },
     { type:'open', text:"Discuss detection and response strategy for breaches." },
-    { type:'open', text:"Explain risk assessment and prioritization." }
+    { type:'open', text:"Explain risk assessment and prioritization." },
+    { type:'open', text:"Discuss OWASP Top 10 and relevant mitigations." },
+    { type:'open', text:"Explain zero trust principles in practice." },
+    { type:'open', text:"Share your approach to vendor/security audits." },
+    { type:'open', text:"Describe incident tabletop exercises you led." },
+    { type:'open', text:"Explain security monitoring and alerting tuning." }
   ],
   "Product Manager": [
     { type:'open', text:"Describe prioritization framework for roadmap decisions." },
     { type:'open', text:"How do you translate user research into requirements?" },
     { type:'open', text:"Explain defining success metrics for a feature." },
     { type:'open', text:"Share a time you aligned stakeholders with conflicting goals." },
-    { type:'open', text:"Discuss tradeoffs you made on scope, timeline, quality." }
+    { type:'open', text:"Discuss tradeoffs you made on scope, timeline, quality." },
+    { type:'open', text:"Explain launch planning and change management." },
+    { type:'open', text:"Discuss product discovery techniques you use." },
+    { type:'open', text:"Share how you prevent scope creep practically." },
+    { type:'open', text:"Explain a time you sunset a feature and why." },
+    { type:'open', text:"Describe aligning design/eng/product effectively." }
   ],
   "UI/UX Designer": [
     { type:'open', text:"Explain your approach to accessible design." },
     { type:'open', text:"Discuss user testing methods and insights." },
     { type:'open', text:"How do you document design systems for scale?" },
     { type:'open', text:"Share a case of improving task success rate." },
-    { type:'open', text:"Describe collaboration with engineering teams." }
+    { type:'open', text:"Describe collaboration with engineering teams." },
+    { type:'open', text:"Explain heuristic evaluations and common findings." },
+    { type:'open', text:"Discuss responsive design and device breakpoints." },
+    { type:'open', text:"How do you measure usability improvements?" },
+    { type:'open', text:"Share a design tradeoff you made and rationale." },
+    { type:'open', text:"Describe handling edge cases in complex flows." }
   ]
 }
 const behavioral: Question[] = [
@@ -110,14 +160,26 @@ function evaluate(answer: string) {
 
 export default function MockInterview() {
   const [role, setRole] = useState('Software Engineer')
-  const [resumeHint, setResumeHint] = useState('')
+  const [resumeText, setResumeText] = useState('')
   const [step, setStep] = useState(0)
-  const [answers, setAnswers] = useState<any[]>(Array(15).fill(''))
-  const personalized: Question[] = resumeHint.trim() ? [
-    { type:'open', text:`Tell me about your experience with ${(resumeHint.match(/\b[A-Za-z\-\+\.]{3,}\b/g)||[])[0] || 'a key technology'} and impact.` },
-    { type:'open', text:"Which project best demonstrates your strengths and why?" }
+  const [answers, setAnswers] = useState<any[]>([])
+  const techDict = ['react','next','node','express','typescript','javascript','python','java','spring','docker','kubernetes','aws','gcp','azure','graphql','rest','sql','postgres','mysql','mongodb','redis','pandas','numpy','tableau','power bi','spark','hadoop','terraform','ci','cd','jenkins','git','linux']
+  const extractKeywords = (text: string) => {
+    const tokens = (text.toLowerCase().match(/\b[a-z][a-z\+\-\.]{2,}\b/g) || [])
+    const freq: Record<string, number> = {}
+    tokens.forEach(t=>{ if (techDict.includes(t)) freq[t] = (freq[t]||0)+1 })
+    return Object.entries(freq).sort((a,b)=> b[1]-a[1]).slice(0,5).map(([k])=>k)
+  }
+  const kw = extractKeywords(resumeText)
+  const personalized: Question[] = resumeText.trim() ? [
+    { type:'open', text:`Describe a project using ${kw[0] || 'your primary technology'} and the measurable impact.` },
+    { type:'open', text:`How did you test and deploy features built with ${kw[1] || 'your stack'}?` },
+    { type:'open', text:`Share a performance optimization you implemented in ${kw[2] || 'your system'}.` },
+    { type:'open', text:`Discuss an incident and how you mitigated it in ${kw[3] || 'production'}.` },
+    { type:'open', text:`Explain architectural decisions around ${kw[4] || 'key components'}.` }
   ] : []
-  const questions: Question[] = [ ...banks[role], ...behavioral.slice(0,3), ...aptitude.slice(0,2), ...personalized ].slice(0,10)
+  const questions: Question[] = [ ...banks[role], ...behavioral, ...aptitude, ...personalized ]
+  useEffect(()=>{ setStep(0); setAnswers(Array(questions.length).fill('')) ; setFeedback(null) }, [role, resumeText])
   const [feedback, setFeedback] = useState<{ scores:number[]; tips:string[]; correct:number } | null>(null)
 
   const onSubmit = () => {
@@ -147,8 +209,8 @@ export default function MockInterview() {
               </select>
             </div>
             <div className="mt-3">
-              <label className="text-sm">Resume keywords or summary (optional)</label>
-              <Textarea rows={3} placeholder="e.g. React, Node, AWS; led project on analytics" value={resumeHint} onChange={(e)=>{ setResumeHint(e.target.value); setStep(0); setFeedback(null) }} />
+              <label className="text-sm">Paste resume text (optional)</label>
+              <Textarea rows={4} placeholder="Paste key resume sections or summary" value={resumeText} onChange={(e)=>{ setResumeText(e.target.value) }} />
             </div>
           </CardContent>
         </Card>
@@ -178,7 +240,7 @@ export default function MockInterview() {
             <div className="mt-4 flex gap-2">
               <Button variant="outline" onClick={()=> setStep(Math.max(0, step-1))}>Prev</Button>
               {step < questions.length - 1 ? (
-                <Button className="bg-maroon hover:bg-maroon/90" onClick={()=> setStep(step+1)}>Next</Button>
+                <Button className="bg-maroon hover:bg-maroon/90" onClick={()=> setStep(Math.min(step+1, questions.length-1))}>Next</Button>
               ) : (
                 <Button className="bg-maroon hover:bg-maroon/90" onClick={onSubmit}>Finish</Button>
               )}
