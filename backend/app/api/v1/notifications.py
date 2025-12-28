@@ -5,6 +5,8 @@ import os
 import smtplib
 import ssl
 from email.message import EmailMessage
+import json
+import urllib.request
 
 from app.db.session import get_db
 from app.models.notification import Notification
@@ -25,9 +27,14 @@ def create_notification(notification: NotificationCreate, db: Session = Depends(
         user = db.query(User).filter(User.id == data.get('user_id')).first()
         if user:
             _send_email(user.email, data.get('title') or 'Message from TPO', data.get('message') or '')
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"Send after create failed: {e}")
     return db_notification
+
+@router.post("/send-email")
+def send_email_direct(email: str, subject: str, message: str):
+    ok = _send_email(email, subject, message)
+    return {"email_sent": ok}
 
 @router.get("/by-user/{user_id}", response_model=List[NotificationResponse])
 def get_notifications_by_user(user_id: int, db: Session = Depends(get_db)):
@@ -69,6 +76,27 @@ def delete_notification(notification_id: int, db: Session = Depends(get_db)):
     db.delete(db_notification)
     db.commit()
     return {"message": "Notification deleted successfully"}
+def _send_resend(to_email: str, subject: str, body: str) -> bool:
+    api_key = settings.RESEND_API_KEY or os.getenv('RESEND_API_KEY', '')
+    from_addr = settings.RESEND_FROM or os.getenv('RESEND_FROM', '') or (settings.SMTP_FROM or os.getenv('SMTP_FROM', ''))
+    if not api_key or not from_addr:
+        return False
+    try:
+        data = json.dumps({
+            "from": from_addr,
+            "to": to_email,
+            "subject": subject or 'Message from TPO',
+            "html": f"<p>{body or ''}</p>"
+        }).encode('utf-8')
+        req = urllib.request.Request('https://api.resend.com/emails', data=data, method='POST')
+        req.add_header('Content-Type', 'application/json')
+        req.add_header('Authorization', f'Bearer {api_key}')
+        with urllib.request.urlopen(req) as resp:
+            return 200 <= resp.getcode() < 300
+    except Exception as e:
+        print(f"Resend send failed: {e}")
+        return False
+
 def _send_email(to_email: str, subject: str, body: str) -> bool:
     host = settings.SMTP_HOST or os.getenv('SMTP_HOST', '')
     user = settings.SMTP_USER or os.getenv('SMTP_USER', '')
@@ -101,4 +129,5 @@ def _send_email(to_email: str, subject: str, body: str) -> bool:
     except Exception as e:
         # Log only; do not raise to keep API success
         print(f"Email send failed: {e}")
-        return False
+        # Fallback to Resend if configured
+        return _send_resend(to_email, subject, body)

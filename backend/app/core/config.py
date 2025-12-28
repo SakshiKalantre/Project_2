@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     SMTP_USER: str = ""
     SMTP_PASS: str = ""
     SMTP_FROM: str = ""
+    # Resend API fallback
+    RESEND_API_KEY: str = ""
+    RESEND_FROM: str = ""
     
     class Config:
         case_sensitive = True
