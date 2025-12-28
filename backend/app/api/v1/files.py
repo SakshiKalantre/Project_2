@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Body, Query
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Body, Query, Request
 from typing import Union, Optional
 from typing import Union
 from sqlalchemy.orm import Session
@@ -360,7 +360,7 @@ def _send_email(to_email: str, subject: str, body: str) -> bool:
         print(f"Email send failed (files.reject): {e}")
         return False
 
-def reject_resume(resume_id: int, reason: Union[str, dict, None] = Body(None), reason_q: Optional[str] = Query(None), db: Session = Depends(get_db)):
+async def reject_resume(resume_id: int, request: Request, reason: Union[str, dict, None] = Body(None), reason_q: Optional[str] = Query(None), db: Session = Depends(get_db)):
     r = db.query(Resume).filter(Resume.id == resume_id).first()
     if not r:
         raise HTTPException(status_code=404, detail="Resume not found")
@@ -375,6 +375,13 @@ def reject_resume(resume_id: int, reason: Union[str, dict, None] = Body(None), r
             msg = reason
         elif isinstance(reason, dict):
             msg = reason.get('reason')
+        if not msg:
+            try:
+                payload = await request.json()
+                if isinstance(payload, dict):
+                    msg = payload.get('reason')
+            except Exception:
+                pass
         if not msg:
             msg = reason_q
         note = Notification(user_id=r.user_id, title='Resume Rejected', message=(msg or 'Your resume was rejected'))

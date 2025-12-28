@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Body, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Body, Query, Request
 from typing import Union, Optional
 from sqlalchemy.orm import Session
 from typing import List
@@ -324,7 +324,7 @@ def _send_email(to_email: str, subject: str, body: str) -> bool:
         return False
 
 @router.put("/tpo/profiles/{user_id}/reject")
-def tpo_reject_profile(user_id: int, reason: Union[str, dict, None] = Body(None), reason_q: Optional[str] = Query(None), db: Session = Depends(get_db)):
+async def tpo_reject_profile(user_id: int, request: Request, reason: Union[str, dict, None] = Body(None), reason_q: Optional[str] = Query(None), db: Session = Depends(get_db)):
     db_profile = db.query(Profile).filter(Profile.user_id == user_id).first()
     if not db_profile:
         raise HTTPException(status_code=404, detail="Profile not found")
@@ -335,6 +335,13 @@ def tpo_reject_profile(user_id: int, reason: Union[str, dict, None] = Body(None)
         msg_in = reason
     elif isinstance(reason, dict):
         msg_in = reason.get('reason')
+    if not msg_in:
+        try:
+            payload = await request.json()
+            if isinstance(payload, dict):
+                msg_in = payload.get('reason')
+        except Exception:
+            pass
     if msg_in:
         db_profile.approval_notes = msg_in
     elif reason_q:
@@ -353,6 +360,13 @@ def tpo_reject_profile(user_id: int, reason: Union[str, dict, None] = Body(None)
                 msg = reason
             elif isinstance(reason, dict):
                 msg = reason.get('reason')
+            if not msg:
+                try:
+                    payload = await request.json()
+                    if isinstance(payload, dict):
+                        msg = payload.get('reason')
+                except Exception:
+                    pass
             if not msg:
                 msg = reason_q
             note = Notification(user_id=user_id, title='Profile Rejected', message=(msg or 'Your profile was rejected'))
