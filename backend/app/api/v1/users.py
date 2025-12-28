@@ -338,12 +338,14 @@ def tpo_reject_profile(user_id: int, reason: dict | None = None, db: Session = D
         db_user.is_approved = False
         db.commit()
         db.refresh(db_user)
+        email_sent = False
         try:
             note = Notification(user_id=user_id, title='Profile Rejected', message=(reason or {}).get('reason') or 'Your profile was rejected')
             db.add(note); db.commit(); db.refresh(note)
-            _send_email(db_user.email, 'Profile Rejected', note.message)
+            email_sent = _send_email(db_user.email, 'Profile Rejected', note.message)
         except Exception as e:
             print(f"Profile reject notify failed: {e}")
+        return { "user_id": user_id, "is_approved": False, "email_sent": email_sent }
     return { "user_id": user_id, "is_approved": False }
 
 # TPO: Approved students list

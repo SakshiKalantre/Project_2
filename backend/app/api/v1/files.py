@@ -365,12 +365,13 @@ def reject_resume(resume_id: int, reason: dict | None = None, db: Session = Depe
     r.is_verified = False
     db.commit()
     db.refresh(r)
+    email_sent = False
     try:
         user = db.query(User).filter(User.id == r.user_id).first()
         note = Notification(user_id=r.user_id, title='Resume Rejected', message=(reason or {}).get('reason') or 'Your resume was rejected')
         db.add(note); db.commit(); db.refresh(note)
         if user:
-            _send_email(user.email, 'Resume Rejected', note.message)
+            email_sent = _send_email(user.email, 'Resume Rejected', note.message)
     except Exception as e:
         print(f"Reject resume notify failed: {e}")
-    return {"id": r.id, "is_verified": False}
+    return {"id": r.id, "is_verified": False, "email_sent": email_sent}
