@@ -15,13 +15,15 @@ try {
   mailer = require('nodemailer')
   if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
     const port = parseInt(process.env.SMTP_PORT || '587')
-    const isGmail = String(process.env.SMTP_HOST).includes('smtp.gmail.com')
-    const base = isGmail ? { service: 'gmail' } : { host: process.env.SMTP_HOST }
+    const host = process.env.SMTP_HOST
     mailTransport = mailer.createTransport({
-      ...base,
+      host,
       port,
       secure: port === 465,
-      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+      requireTLS: port === 587,
+      logger: true,
+      debug: true
     })
     try { mailTransport.verify().then(()=>console.log('✓ SMTP ready')).catch(e=>console.warn('SMTP verify failed:', e?.message || e)) } catch {}
   }
@@ -1177,6 +1179,7 @@ app.post('/api/v1/users/:user_id/notifications', async (req, res) => {
     const userId = parseInt(req.params.user_id)
     const { title, message } = req.body || {}
     await dbClient.query('INSERT INTO notifications (user_id, title, message, created_at, is_read) VALUES ($1,$2,$3,NOW(),FALSE)', [userId, title || null, message || null])
+    let email_sent = false
     try {
       if (mailTransport) {
         const u = await dbClient.query('SELECT email, first_name, last_name FROM users WHERE id = $1', [userId])
@@ -1185,12 +1188,15 @@ app.post('/api/v1/users/:user_id/notifications', async (req, res) => {
           const subject = title || 'Message from TPO'
           const text = message || ''
           await mailTransport.sendMail({ from: process.env.SMTP_FROM || process.env.SMTP_USER, to, subject, text })
+          email_sent = true
         }
       }
-    } catch {}
-    res.status(201).json({ success: true })
+    } catch (e) {
+      console.warn('SMTP send failed:', e?.message || e)
+    }
+    res.status(201).json({ success: true, email_sent })
   } catch (error) {
-    res.status(500).json({ error: 'Failed to create notification' })
+    res.status(500).json({ error: 'Failed to create notification', details: String(error && error.message || '') })
   }
 })
 
