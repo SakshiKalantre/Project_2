@@ -324,7 +324,7 @@ def _send_email(to_email: str, subject: str, body: str) -> bool:
         return False
 
 @router.put("/tpo/profiles/{user_id}/reject")
-async def tpo_reject_profile(user_id: int, request: Request, reason: Union[str, dict, None] = Body(None), reason_q: Optional[str] = Query(None), db: Session = Depends(get_db)):
+async def tpo_reject_profile(user_id: int, request: Request, reason: Union[str, dict, None] = Body(None, embed=True), reason_q: Optional[str] = Query(None), db: Session = Depends(get_db)):
     db_profile = db.query(Profile).filter(Profile.user_id == user_id).first()
     if not db_profile:
         raise HTTPException(status_code=404, detail="Profile not found")

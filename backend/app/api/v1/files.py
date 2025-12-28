@@ -360,7 +360,7 @@ def _send_email(to_email: str, subject: str, body: str) -> bool:
         print(f"Email send failed (files.reject): {e}")
         return False
 
-async def reject_resume(resume_id: int, request: Request, reason: Union[str, dict, None] = Body(None), reason_q: Optional[str] = Query(None), db: Session = Depends(get_db)):
+async def reject_resume(resume_id: int, request: Request, reason: Union[str, dict, None] = Body(None, embed=True), reason_q: Optional[str] = Query(None), db: Session = Depends(get_db)):
     r = db.query(Resume).filter(Resume.id == resume_id).first()
     if not r:
         raise HTTPException(status_code=404, detail="Resume not found")
