@@ -720,7 +720,10 @@ export default function TPODashboard() {
                             const reason = prompt('Enter rejection reason')
                             if (!reason) return
                             try {
-                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/files/resumes/${resume.id}/reject?reason=${encodeURIComponent(reason)}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ reason }) })
+                              let res = await fetch(`${API_BASE_DEFAULT}/api/v1/files/resumes/${resume.id}/reject?reason=${encodeURIComponent(reason)}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ reason }) })
+                              if (!res.ok) {
+                                res = await fetch(`${API_BASE_DEFAULT}/api/v1/files/resumes/reject`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ resume_id: resume.id, reason }) })
+                              }
                               if (res.ok) fetchTpoAndData()
                             } catch {}
                           }}>

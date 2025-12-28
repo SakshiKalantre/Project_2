@@ -386,3 +386,33 @@ async def reject_resume(resume_id: int, request: Request, reason_q: Optional[str
     except Exception as e:
         print(f"Reject resume notify failed: {e}")
     return {"id": r.id, "is_verified": False, "email_sent": email_sent}
+@router.post("/resumes/reject")
+async def reject_resume_post(request: Request, db: Session = Depends(get_db)):
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+    resume_id = None
+    reason = None
+    if isinstance(payload, dict):
+        resume_id = payload.get('resume_id') or payload.get('id')
+        reason = payload.get('reason')
+    try:
+        resume_id = int(resume_id)
+    except Exception:
+        raise HTTPException(status_code=422, detail="resume_id missing or invalid")
+    r = db.query(Resume).filter(Resume.id == resume_id).first()
+    if not r:
+        raise HTTPException(status_code=404, detail="Resume not found")
+    r.is_verified = False
+    db.commit(); db.refresh(r)
+    email_sent = False
+    try:
+        user = db.query(User).filter(User.id == r.user_id).first()
+        note = Notification(user_id=r.user_id, title='Resume Rejected', message=(reason or 'Your resume was rejected'))
+        db.add(note); db.commit(); db.refresh(note)
+        if user:
+            email_sent = _send_email(user.email, 'Resume Rejected', note.message)
+    except Exception as e:
+        print(f"Reject resume notify failed (post): {e}")
+    return {"id": r.id, "is_verified": False, "email_sent": email_sent}
