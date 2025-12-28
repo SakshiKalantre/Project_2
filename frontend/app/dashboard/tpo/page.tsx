@@ -56,6 +56,7 @@ export default function TPODashboard() {
   const [openEventId, setOpenEventId] = useState<number | null>(null)
   const [eventRegs, setEventRegs] = useState<Array<any>>([])
   const [eventFilter, setEventFilter] = useState<'Upcoming'|'Completed'|'Cancelled'|'All'>('Upcoming')
+  const [messages, setMessages] = useState<Record<number, string>>({})
   const [openDetailsUserId, setOpenDetailsUserId] = useState<number | null>(null)
   const [detailData, setDetailData] = useState<any>(null)
 
