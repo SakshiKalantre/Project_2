@@ -323,14 +323,14 @@ def _send_email(to_email: str, subject: str, body: str) -> bool:
         return False
 
 @router.put("/tpo/profiles/{user_id}/reject")
-def tpo_reject_profile(user_id: int, reason: dict | None = Body(None), db: Session = Depends(get_db)):
+def tpo_reject_profile(user_id: int, reason: str | None = Body(None, embed=True), db: Session = Depends(get_db)):
     db_profile = db.query(Profile).filter(Profile.user_id == user_id).first()
     if not db_profile:
         raise HTTPException(status_code=404, detail="Profile not found")
     db_profile.is_approved = True
     db_profile.is_approved = False
-    if reason and isinstance(reason, dict):
-        db_profile.approval_notes = reason.get('reason') or db_profile.approval_notes
+    if reason:
+        db_profile.approval_notes = reason
     db.commit()
     db.refresh(db_profile)
     db_user = db.query(User).filter(User.id == user_id).first()
@@ -340,7 +340,7 @@ def tpo_reject_profile(user_id: int, reason: dict | None = Body(None), db: Sessi
         db.refresh(db_user)
         email_sent = False
         try:
-            note = Notification(user_id=user_id, title='Profile Rejected', message=(reason or {}).get('reason') or 'Your profile was rejected')
+            note = Notification(user_id=user_id, title='Profile Rejected', message=(reason or 'Your profile was rejected'))
             db.add(note); db.commit(); db.refresh(note)
             email_sent = _send_email(db_user.email, 'Profile Rejected', note.message)
         except Exception as e:
