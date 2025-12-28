@@ -14,12 +14,16 @@ let mailTransport = null
 try {
   mailer = require('nodemailer')
   if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+    const port = parseInt(process.env.SMTP_PORT || '587')
+    const isGmail = String(process.env.SMTP_HOST).includes('smtp.gmail.com')
+    const base = isGmail ? { service: 'gmail' } : { host: process.env.SMTP_HOST }
     mailTransport = mailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: false,
+      ...base,
+      port,
+      secure: port === 465,
       auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
     })
+    try { mailTransport.verify().then(()=>console.log('✓ SMTP ready')).catch(e=>console.warn('SMTP verify failed:', e?.message || e)) } catch {}
   }
 } catch {}
 
