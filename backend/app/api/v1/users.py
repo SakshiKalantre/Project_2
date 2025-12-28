@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.orm import Session
 from typing import List
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -323,7 +323,7 @@ def _send_email(to_email: str, subject: str, body: str) -> bool:
         return False
 
 @router.put("/tpo/profiles/{user_id}/reject")
-def tpo_reject_profile(user_id: int, reason: dict | None = None, db: Session = Depends(get_db)):
+def tpo_reject_profile(user_id: int, reason: dict | None = Body(None), db: Session = Depends(get_db)):
     db_profile = db.query(Profile).filter(Profile.user_id == user_id).first()
     if not db_profile:
         raise HTTPException(status_code=404, detail="Profile not found")

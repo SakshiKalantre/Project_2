@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Body
 from sqlalchemy.orm import Session
 from typing import List
 import os
@@ -358,7 +358,7 @@ def _send_email(to_email: str, subject: str, body: str) -> bool:
         print(f"Email send failed (files.reject): {e}")
         return False
 
-def reject_resume(resume_id: int, reason: dict | None = None, db: Session = Depends(get_db)):
+def reject_resume(resume_id: int, reason: dict | None = Body(None), db: Session = Depends(get_db)):
     r = db.query(Resume).filter(Resume.id == resume_id).first()
     if not r:
         raise HTTPException(status_code=404, detail="Resume not found")
