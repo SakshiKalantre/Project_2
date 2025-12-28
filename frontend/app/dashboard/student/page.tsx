@@ -879,7 +879,20 @@ export default function StudentDashboard() {
               <div>
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-2xl font-bold text-maroon">Notifications</h2>
-                  <Button variant="outline">Mark all as read</Button>
+                  <Button variant="outline" onClick={async()=>{
+                    try {
+                      if (!userId) return
+                      const unread = notifications.filter(n=>!n.read)
+                      await Promise.all(unread.map(n=> fetch(`${API_BASE}/api/v1/notifications/${n.id}/read`, { method:'PUT' })))
+                      const res = await fetch(`/api/notifications/by-user/${userId}`, { cache:'no-store' })
+                      if (res.ok) {
+                        const rows = await res.json()
+                        setNotifications(rows.map((n:any)=>({ id: n.id, title: n.title, message: n.message, time: new Date(n.created_at).toLocaleString(), read: n.is_read })))
+                      } else {
+                        setNotifications(prev=> prev.map(n=> ({ ...n, read: true })))
+                      }
+                    } catch {}
+                  }}>Mark all as read</Button>
                 </div>
                 
                 <div className="space-y-4">
