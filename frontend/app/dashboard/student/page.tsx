@@ -945,7 +945,10 @@ export default function StudentDashboard() {
                       <p className="mb-4">
                         Upload your resume to receive a detailed analysis of your strengths and areas for improvement.
                       </p>
-                      <Button className="w-full bg-maroon hover:bg-maroon/90">
+                      <Button className="w-full bg-maroon hover:bg-maroon/90" onClick={()=>{
+                        const w = window.open('/tools/resume-scorer', '_blank')
+                        if (!w) { const a=document.createElement('a'); a.href='/tools/resume-scorer'; a.target='_blank'; document.body.appendChild(a); a.click(); a.remove() }
+                      }}>
                         Launch Resume Scorer
                       </Button>
                     </CardContent>
@@ -965,7 +968,10 @@ export default function StudentDashboard() {
                       <p className="mb-4">
                         Prepare for real interviews with personalized questions and feedback.
                       </p>
-                      <Button className="w-full bg-maroon hover:bg-maroon/90">
+                      <Button className="w-full bg-maroon hover:bg-maroon/90" onClick={()=>{
+                        const w = window.open('/tools/mock-interview', '_blank')
+                        if (!w) { const a=document.createElement('a'); a.href='/tools/mock-interview'; a.target='_blank'; document.body.appendChild(a); a.click(); a.remove() }
+                      }}>
                         Start Mock Interview
                       </Button>
                     </CardContent>
