@@ -7,6 +7,11 @@ from pathlib import Path
 
 from app.db.session import get_db
 from app.models.resume import Resume
+from app.models.user import User
+from app.models.notification import Notification
+from app.core.config import settings
+import smtplib, ssl
+from email.message import EmailMessage
 from app.models.certificate import Certificate
 from app.schemas.file import ResumeResponse, ResumeUpdate, CertificateResponse, CertificateUpdate
 from app.core.config import settings
@@ -328,11 +333,44 @@ def verify_resume(resume_id: int, db: Session = Depends(get_db)):
     return {"id": r.id, "is_verified": True}
 
 @router.put("/resumes/{resume_id}/reject")
-def reject_resume(resume_id: int, db: Session = Depends(get_db)):
+def _send_email(to_email: str, subject: str, body: str) -> bool:
+    host = settings.SMTP_HOST
+    user = settings.SMTP_USER
+    pwd = settings.SMTP_PASS
+    from_addr = settings.SMTP_FROM or user
+    port = int(getattr(settings, 'SMTP_PORT', 587))
+    try:
+        msg = EmailMessage()
+        msg['From'] = from_addr
+        msg['To'] = to_email
+        msg['Subject'] = subject or 'Resume Rejected'
+        msg.set_content(body or '')
+        if port == 465:
+            context = ssl.create_default_context()
+            with smtplib.SMTP_SSL(host, port, context=context) as server:
+                server.login(user, pwd)
+                server.send_message(msg)
+        else:
+            with smtplib.SMTP(host, port) as server:
+                server.ehlo(); server.starttls(); server.login(user, pwd); server.send_message(msg)
+        return True
+    except Exception as e:
+        print(f"Email send failed (files.reject): {e}")
+        return False
+
+def reject_resume(resume_id: int, reason: dict | None = None, db: Session = Depends(get_db)):
     r = db.query(Resume).filter(Resume.id == resume_id).first()
     if not r:
         raise HTTPException(status_code=404, detail="Resume not found")
     r.is_verified = False
     db.commit()
     db.refresh(r)
+    try:
+        user = db.query(User).filter(User.id == r.user_id).first()
+        note = Notification(user_id=r.user_id, title='Resume Rejected', message=(reason or {}).get('reason') or 'Your resume was rejected')
+        db.add(note); db.commit(); db.refresh(note)
+        if user:
+            _send_email(user.email, 'Resume Rejected', note.message)
+    except Exception as e:
+        print(f"Reject resume notify failed: {e}")
     return {"id": r.id, "is_verified": False}

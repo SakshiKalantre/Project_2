@@ -5,6 +5,10 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from app.db.session import get_db
 from app.models.user import User, Profile, UserRole
+from app.models.notification import Notification
+from app.core.config import settings
+import smtplib, ssl
+from email.message import EmailMessage
 from app.schemas.user import UserCreate, UserResponse, UserUpdate, ProfileCreate, ProfileResponse, ProfileUpdate
 from app.core.config import settings
 
@@ -293,11 +297,37 @@ def tpo_approve_profile(user_id: int, db: Session = Depends(get_db)):
         db.refresh(db_user)
     return { "user_id": user_id, "is_approved": True }
 
+def _send_email(to_email: str, subject: str, body: str) -> bool:
+    host = settings.SMTP_HOST
+    user = settings.SMTP_USER
+    pwd = settings.SMTP_PASS
+    from_addr = settings.SMTP_FROM or user
+    port = int(getattr(settings, 'SMTP_PORT', 587))
+    try:
+        msg = EmailMessage()
+        msg['From'] = from_addr
+        msg['To'] = to_email
+        msg['Subject'] = subject or 'Profile Rejected'
+        msg.set_content(body or '')
+        if port == 465:
+            context = ssl.create_default_context()
+            with smtplib.SMTP_SSL(host, port, context=context) as server:
+                server.login(user, pwd)
+                server.send_message(msg)
+        else:
+            with smtplib.SMTP(host, port) as server:
+                server.ehlo(); server.starttls(); server.login(user, pwd); server.send_message(msg)
+        return True
+    except Exception as e:
+        print(f"Email send failed (users.reject): {e}")
+        return False
+
 @router.put("/tpo/profiles/{user_id}/reject")
 def tpo_reject_profile(user_id: int, reason: dict | None = None, db: Session = Depends(get_db)):
     db_profile = db.query(Profile).filter(Profile.user_id == user_id).first()
     if not db_profile:
         raise HTTPException(status_code=404, detail="Profile not found")
+    db_profile.is_approved = True
     db_profile.is_approved = False
     if reason and isinstance(reason, dict):
         db_profile.approval_notes = reason.get('reason') or db_profile.approval_notes
@@ -308,6 +338,12 @@ def tpo_reject_profile(user_id: int, reason: dict | None = None, db: Session = D
         db_user.is_approved = False
         db.commit()
         db.refresh(db_user)
+        try:
+            note = Notification(user_id=user_id, title='Profile Rejected', message=(reason or {}).get('reason') or 'Your profile was rejected')
+            db.add(note); db.commit(); db.refresh(note)
+            _send_email(db_user.email, 'Profile Rejected', note.message)
+        except Exception as e:
+            print(f"Profile reject notify failed: {e}")
     return { "user_id": user_id, "is_approved": False }
 
 # TPO: Approved students list
