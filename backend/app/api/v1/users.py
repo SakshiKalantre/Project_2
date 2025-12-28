@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Body, Query, Request
-from typing import Union, Optional
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
+from typing import Optional
 from sqlalchemy.orm import Session
 from typing import List
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -324,17 +324,13 @@ def _send_email(to_email: str, subject: str, body: str) -> bool:
         return False
 
 @router.put("/tpo/profiles/{user_id}/reject")
-async def tpo_reject_profile(user_id: int, request: Request, reason: Union[str, dict, None] = Body(None, embed=True), reason_q: Optional[str] = Query(None), db: Session = Depends(get_db)):
+async def tpo_reject_profile(user_id: int, request: Request, reason_q: Optional[str] = Query(None), db: Session = Depends(get_db)):
     db_profile = db.query(Profile).filter(Profile.user_id == user_id).first()
     if not db_profile:
         raise HTTPException(status_code=404, detail="Profile not found")
     db_profile.is_approved = True
     db_profile.is_approved = False
     msg_in = None
-    if isinstance(reason, str):
-        msg_in = reason
-    elif isinstance(reason, dict):
-        msg_in = reason.get('reason')
     if not msg_in:
         try:
             payload = await request.json()
@@ -356,10 +352,7 @@ async def tpo_reject_profile(user_id: int, request: Request, reason: Union[str, 
         email_sent = False
         try:
             msg = None
-            if isinstance(reason, str):
-                msg = reason
-            elif isinstance(reason, dict):
-                msg = reason.get('reason')
+            msg = None
             if not msg:
                 try:
                     payload = await request.json()
