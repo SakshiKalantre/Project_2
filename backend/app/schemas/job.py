@@ -9,6 +9,7 @@ class JobBase(BaseModel):
     description: str
     requirements: str
     salary_range: Optional[str] = None
+    job_url: Optional[str] = None
 
 class JobCreate(JobBase):
     application_deadline: Optional[datetime] = None
@@ -31,6 +32,7 @@ class JobResponse(JobBase):
     created_by: int
     created_at: datetime
     updated_at: Optional[datetime] = None
+    applicants: Optional[int] = None
     
     class Config:
         from_attributes = True

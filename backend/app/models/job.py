@@ -23,6 +23,7 @@ class Job(Base):
     requirements = Column(Text, nullable=False)
     salary_range = Column(String, nullable=True)
     job_type = Column(String, nullable=True)  # Full-time, Internship, etc.
+    job_url = Column(String, nullable=True)
     application_deadline = Column(DateTime(timezone=True), nullable=True)
     is_active = Column(Boolean, default=True)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)  # TPO user
