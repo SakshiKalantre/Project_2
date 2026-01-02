@@ -8,6 +8,7 @@ from app.models.job import Job, JobApplication
 from app.schemas.job import JobCreate, JobResponse, JobUpdate, JobApplicationCreate, JobApplicationResponse, JobApplicationUpdate
 
 router = APIRouter()
+tpo_router = APIRouter()
 
 @router.post("/", response_model=JobResponse)
 def create_job(job: JobCreate, db: Session = Depends(get_db)):
@@ -170,6 +171,23 @@ def tpo_update_job(job_id: int, job_update: JobUpdate, db: Session = Depends(get
 
 @router.get("/tpo/jobs/{job_id}/applications", response_model=List[JobApplicationResponse])
 def tpo_get_job_apps(job_id: int, db: Session = Depends(get_db)):
+    return get_applications_by_job(job_id, db)
+
+# Top-level TPO router under /api/v1/tpo
+@tpo_router.get("/jobs", response_model=List[JobResponse])
+def tpo_jobs_list(db: Session = Depends(get_db)):
+    return get_jobs(0, 100, db)
+
+@tpo_router.post("/jobs", response_model=JobResponse)
+def tpo_jobs_create(job: JobCreate, db: Session = Depends(get_db)):
+    return create_job(job, db)
+
+@tpo_router.put("/jobs/{job_id}", response_model=JobResponse)
+def tpo_jobs_update(job_id: int, job_update: JobUpdate, db: Session = Depends(get_db)):
+    return update_job(job_id, job_update, db)
+
+@tpo_router.get("/jobs/{job_id}/applications", response_model=List[JobApplicationResponse])
+def tpo_jobs_get_apps(job_id: int, db: Session = Depends(get_db)):
     return get_applications_by_job(job_id, db)
 
 @router.put("/applications/{application_id}", response_model=JobApplicationResponse)

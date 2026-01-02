@@ -272,7 +272,10 @@ export default function TPODashboard() {
     const refreshJobs = async () => {
       try {
         if (activeTab === 'jobs') {
-          const tj = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/jobs`)
+          let tj = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/jobs`)
+          if (!tj.ok) {
+            tj = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs?t=${Date.now()}`, { cache:'no-store' })
+          }
           if (tj.ok) setJobs(await tj.json())
         }
       } catch {}

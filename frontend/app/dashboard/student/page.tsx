@@ -760,7 +760,11 @@ export default function StudentDashboard() {
                                 const userRes = await fetch(`${API_BASE}/api/v1/users/by-email/${encodeURIComponent(current?.email)}`)
                                 if (userRes.ok) {
                                   const u = await userRes.json()
-                                  await fetch(`${API_BASE}/api/v1/jobs/${job.id}/apply`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ user_id: u.id }) })
+                                  let applyRes = await fetch(`${API_BASE}/api/v1/jobs/${job.id}/apply`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ user_id: u.id }) })
+                                  if (!applyRes.ok) {
+                                    applyRes = await fetch(`${API_BASE}/api/v1/jobs/applications`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ job_id: job.id, user_id: u.id }) })
+                                  }
+                                  if (!applyRes.ok) throw new Error('Apply failed')
                                   alert('Applied successfully')
                                   if (job.job_url) {
                                     const w = window.open(job.job_url, '_blank')

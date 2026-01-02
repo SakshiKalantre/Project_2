@@ -96,6 +96,7 @@ app.add_middleware(
 # Include routers
 app.include_router(users.router, prefix=f"{settings.API_V1_STR}/users", tags=["users"])
 app.include_router(jobs.router, prefix=f"{settings.API_V1_STR}/jobs", tags=["jobs"])
+app.include_router(jobs.tpo_router, prefix=f"{settings.API_V1_STR}/tpo", tags=["tpo"])
 app.include_router(events.router, prefix=f"{settings.API_V1_STR}/events", tags=["events"])
 app.include_router(files.router, prefix=f"{settings.API_V1_STR}/files", tags=["files"])
 app.include_router(notifications.router, prefix=f"{settings.API_V1_STR}/notifications", tags=["notifications"])
