@@ -132,14 +132,14 @@ export default function HomePage() {
           
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
             {[
-              { name: 'TCS', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/Tata_Consultancy_Services_Logo.svg/256px-Tata_Consultancy_Services_Logo.svg.png' },
-              { name: 'Infosys', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Infosys_logo.svg/256px-Infosys_logo.svg.png' },
-              { name: 'Wipro', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Wipro_Primary_Logo_Color_RGB.svg/256px-Wipro_Primary_Logo_Color_RGB.svg.png' },
-              { name: 'Cognizant', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Cognizant_logo_2022.svg/256px-Cognizant_logo_2022.svg.png' },
-              { name: 'Accenture', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/76/Accenture_logo.svg/256px-Accenture_logo.svg.png' },
-              { name: 'Deloitte', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4f/Logo_of_Deloitte.svg/256px-Logo_of_Deloitte.svg.png' },
-              { name: 'HDFC Bank', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/HDFC_Bank_Logo.svg/256px-HDFC_Bank_Logo.svg.png' },
-              { name: 'ICICI Bank', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/ICICI_Bank_Logo.svg/256px-ICICI_Bank_Logo.svg.png' }
+              { name: 'TCS', logo: 'https://commons.wikimedia.org/wiki/Special:FilePath/Tata_Consultancy_Services_old_logo.svg' },
+              { name: 'Infosys', logo: 'https://commons.wikimedia.org/wiki/Special:FilePath/Infosys_logo.svg' },
+              { name: 'Wipro', logo: 'https://commons.wikimedia.org/wiki/Special:FilePath/Wipro_Primary_Logo_Color_RGB.svg' },
+              { name: 'Cognizant', logo: 'https://commons.wikimedia.org/wiki/Special:FilePath/Cognizant_logo_2022.svg' },
+              { name: 'Accenture', logo: 'https://commons.wikimedia.org/wiki/Special:FilePath/Accenture_logo.svg' },
+              { name: 'Deloitte', logo: 'https://commons.wikimedia.org/wiki/Special:FilePath/Logo_of_Deloitte.svg' },
+              { name: 'HDFC Bank', logo: 'https://commons.wikimedia.org/wiki/Special:FilePath/HDFC_Bank_Logo.svg' },
+              { name: 'ICICI Bank', logo: 'https://commons.wikimedia.org/wiki/Special:FilePath/ICICI_Bank_Logo.svg' }
             ].map((company, index) => (
               <Card key={index} className="border-none shadow-md hover:shadow-lg transition-shadow bg-white">
                 <CardContent className="p-6 flex items-center justify-center h-32">
@@ -148,10 +148,8 @@ export default function HomePage() {
                     alt={company.name}
                     className="max-w-full max-h-16 object-contain"
                     loading="lazy"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(company.name)}&background=7A1F2A&color=fff&size=128`;
-                    }}
+                    referrerPolicy="no-referrer"
+                    crossOrigin="anonymous"
                   />
                 </CardContent>
               </Card>
