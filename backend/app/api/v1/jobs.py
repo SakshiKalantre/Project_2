@@ -15,11 +15,28 @@ def create_job(job: JobCreate, db: Session = Depends(get_db)):
     db.add(db_job)
     db.commit()
     db.refresh(db_job)
-    return db_job
+    cnt = db.query(func.count(JobApplication.id)).filter(JobApplication.job_id == db_job.id).scalar() or 0
+    return JobResponse(
+        id=db_job.id,
+        title=db_job.title,
+        company=db_job.company,
+        location=db_job.location,
+        description=db_job.description,
+        requirements=db_job.requirements,
+        salary=db_job.salary,
+        type=getattr(db_job, 'type', None),
+        job_url=getattr(db_job, 'job_url', None),
+        deadline=getattr(db_job, 'deadline', None),
+        is_active=(str(getattr(db_job, 'status', 'Active')).lower() != 'closed'),
+        created_by=getattr(db_job, 'created_by', None),
+        created_at=getattr(db_job, 'posted', None),
+        updated_at=getattr(db_job, 'updated_at', None),
+        applicants=cnt
+    )
 
 @router.get("/", response_model=List[JobResponse])
 def get_jobs(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    rows = db.query(Job).filter(Job.is_active == True).order_by(Job.created_at.desc()).offset(skip).limit(limit).all()
+    rows = db.query(Job).filter(func.lower(Job.status) != 'closed').order_by(Job.posted.desc()).offset(skip).limit(limit).all()
     out: List[JobResponse] = []
     for j in rows:
         cnt = db.query(func.count(JobApplication.id)).filter(JobApplication.job_id == j.id).scalar() or 0
@@ -30,13 +47,14 @@ def get_jobs(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
             location=j.location,
             description=j.description,
             requirements=j.requirements,
-            salary_range=j.salary_range,
+            salary=getattr(j, 'salary', None),
+            type=getattr(j, 'type', None),
             job_url=getattr(j, 'job_url', None),
-            application_deadline=j.application_deadline,
-            is_active=j.is_active,
-            created_by=j.created_by,
-            created_at=j.created_at,
-            updated_at=j.updated_at,
+            deadline=getattr(j, 'deadline', None),
+            is_active=(str(getattr(j, 'status', 'Active')).lower() != 'closed'),
+            created_by=getattr(j, 'created_by', None),
+            created_at=getattr(j, 'posted', None),
+            updated_at=getattr(j, 'updated_at', None),
             applicants=cnt
         )
         out.append(jd)
@@ -47,7 +65,24 @@ def get_job(job_id: int, db: Session = Depends(get_db)):
     db_job = db.query(Job).filter(Job.id == job_id).first()
     if not db_job:
         raise HTTPException(status_code=404, detail="Job not found")
-    return db_job
+    cnt = db.query(func.count(JobApplication.id)).filter(JobApplication.job_id == db_job.id).scalar() or 0
+    return JobResponse(
+        id=db_job.id,
+        title=db_job.title,
+        company=db_job.company,
+        location=db_job.location,
+        description=db_job.description,
+        requirements=db_job.requirements,
+        salary=getattr(db_job, 'salary', None),
+        type=getattr(db_job, 'type', None),
+        job_url=getattr(db_job, 'job_url', None),
+        deadline=getattr(db_job, 'deadline', None),
+        is_active=(str(getattr(db_job, 'status', 'Active')).lower() != 'closed'),
+        created_by=getattr(db_job, 'created_by', None),
+        created_at=getattr(db_job, 'posted', None),
+        updated_at=getattr(db_job, 'updated_at', None),
+        applicants=cnt
+    )
 
 @router.put("/{job_id}", response_model=JobResponse)
 def update_job(job_id: int, job_update: JobUpdate, db: Session = Depends(get_db)):
@@ -58,13 +93,30 @@ def update_job(job_id: int, job_update: JobUpdate, db: Session = Depends(get_db)
     update_data = job_update.dict(exclude_unset=True)
     status = update_data.pop('status', None)
     if status:
-        db_job.is_active = False if str(status).lower() == 'closed' else True
+        db_job.status = status
     for key, value in update_data.items():
         setattr(db_job, key, value)
     
     db.commit()
     db.refresh(db_job)
-    return db_job
+    cnt = db.query(func.count(JobApplication.id)).filter(JobApplication.job_id == db_job.id).scalar() or 0
+    return JobResponse(
+        id=db_job.id,
+        title=db_job.title,
+        company=db_job.company,
+        location=db_job.location,
+        description=db_job.description,
+        requirements=db_job.requirements,
+        salary=getattr(db_job, 'salary', None),
+        type=getattr(db_job, 'type', None),
+        job_url=getattr(db_job, 'job_url', None),
+        deadline=getattr(db_job, 'deadline', None),
+        is_active=(str(getattr(db_job, 'status', 'Active')).lower() != 'closed'),
+        created_by=getattr(db_job, 'created_by', None),
+        created_at=getattr(db_job, 'posted', None),
+        updated_at=getattr(db_job, 'updated_at', None),
+        applicants=cnt
+    )
 
 @router.delete("/{job_id}")
 def delete_job(job_id: int, db: Session = Depends(get_db)):

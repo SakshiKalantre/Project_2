@@ -1,16 +1,7 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Boolean, Enum
+from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Boolean, Date
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.db.session import Base
-from enum import Enum as PyEnum
-
-class ApplicationStatus(str, PyEnum):
-    PENDING = "pending"
-    REVIEWED = "reviewed"
-    SHORTLISTED = "shortlisted"
-    ACCEPTED = "accepted"
-    REJECTED = "rejected"
-    WITHDRAWN = "withdrawn"
 
 class Job(Base):
     __tablename__ = "jobs"
@@ -18,17 +9,16 @@ class Job(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, nullable=False)
     company = Column(String, nullable=False)
-    location = Column(String, nullable=False)
-    description = Column(Text, nullable=False)
-    requirements = Column(Text, nullable=False)
-    salary_range = Column(String, nullable=True)
-    job_type = Column(String, nullable=True)  # Full-time, Internship, etc.
+    location = Column(String, nullable=True)
+    description = Column(Text, nullable=True)
+    requirements = Column(Text, nullable=True)
+    salary = Column(String, nullable=True)
+    type = Column(String, nullable=True)
     job_url = Column(String, nullable=True)
-    application_deadline = Column(DateTime(timezone=True), nullable=True)
-    is_active = Column(Boolean, default=True)
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)  # TPO user
-    total_positions = Column(Integer, default=1)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    deadline = Column(Date, nullable=True)
+    status = Column(String, default="Active")
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    posted = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
     # Relationships
@@ -41,16 +31,10 @@ class JobApplication(Base):
     id = Column(Integer, primary_key=True, index=True)
     job_id = Column(Integer, ForeignKey("jobs.id"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    resume_id = Column(Integer, ForeignKey("resumes.id"), nullable=True)
     cover_letter = Column(Text, nullable=True)
-    status = Column(Enum(ApplicationStatus), default=ApplicationStatus.PENDING, nullable=False)
-    interview_scheduled = Column(Boolean, default=False)
-    interview_date = Column(DateTime(timezone=True), nullable=True)
-    interview_notes = Column(Text, nullable=True)
+    status = Column(String, default="applied", nullable=False)
     applied_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
     # Relationships
     job = relationship("Job", back_populates="applications")
     user = relationship("User", back_populates="applications")
-    resume = relationship("Resume")

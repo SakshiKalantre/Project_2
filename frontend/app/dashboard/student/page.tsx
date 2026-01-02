@@ -187,7 +187,7 @@ export default function StudentDashboard() {
           return
         }
 
-        const jobsResponse = await fetch(`${API_BASE}/api/v1/jobs`)
+        const jobsResponse = await fetch(`${API_BASE}/api/v1/jobs?t=${Date.now()}`, { cache: 'no-store' })
         if (jobsResponse.ok) {
           const jobsData = await jobsResponse.json()
           setJobListings(jobsData)
@@ -236,7 +236,7 @@ export default function StudentDashboard() {
     const refreshJobs = async () => {
       try {
         if (activeTab === 'jobs') {
-          const res = await fetch(`${API_BASE}/api/v1/jobs`)
+          const res = await fetch(`${API_BASE}/api/v1/jobs`, { cache:'no-store' })
           if (res.ok) {
             const rows = await res.json()
             setJobListings(rows)

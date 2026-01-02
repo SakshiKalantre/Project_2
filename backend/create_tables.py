@@ -15,7 +15,7 @@ try:
     from app.models import (
         User, Profile, UserRole,
         Resume, Certificate,
-        Job, JobApplication, ApplicationStatus,
+        Job, JobApplication,
         Event, EventRegistration,
         FileUpload, Notification, NotificationType
     )

@@ -360,31 +360,66 @@ export default function TPODashboard() {
 
   const postJob = async () => {
     try {
-      const payload = { ...jobForm, created_by: tpoUserId }
-      let res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/jobs`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
+      const titleClean = (jobForm.title||'').trim()
+      const companyClean = (jobForm.company||'').trim()
+      if (!titleClean || !companyClean) { alert('Title and Company are required'); return }
+      let creator = tpoUserId
+      if (!creator) {
+        try {
+          let email: string | null = null
+          if (user) {
+            // @ts-ignore
+            email = user.primaryEmailAddress?.emailAddress || user.emailAddresses?.[0]?.emailAddress || null
+          }
+          if (!email) {
+            const stored = typeof window !== 'undefined' ? localStorage.getItem('currentUser') : null
+            const current = stored ? JSON.parse(stored) : null
+            email = current?.email || null
+          }
+          if (email) {
+            const u = await fetch(`${API_BASE_DEFAULT}/api/v1/users/by-email/${encodeURIComponent(email)}`)
+            if (u.ok) { const uj = await u.json(); creator = uj.id; setTpoUserId(uj.id) }
+          }
+        } catch {}
+      }
+
+      const normalizeDate = (val: string) => {
+        const v = (val || '').trim()
+        if (!v) return null
+        if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v
+        const m = v.match(/^(\d{2})-(\d{2})-(\d{4})$/)
+        if (m) return `${m[3]}-${m[2]}-${m[1]}`
+        return null
+      }
+
+      const safeDeadline = normalizeDate(jobForm.deadline)
+      const nodePayload: any = { ...jobForm, title: titleClean, company: companyClean, created_by: creator, deadline: safeDeadline || null }
+      let res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/jobs`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(nodePayload) })
       if (!res.ok) {
-        const dateStr = (jobForm.deadline || '').slice(0,10)
-        const iso = dateStr ? `${dateStr}T00:00:00Z` : null
         const faPayload: any = {
-          title: jobForm.title,
-          company: jobForm.company,
+          title: titleClean,
+          company: companyClean,
           location: jobForm.location,
           description: jobForm.description,
           requirements: jobForm.requirements,
-          salary_range: jobForm.salary || null,
+          salary: jobForm.salary || null,
           job_url: jobForm.job_url || null,
-          application_deadline: iso,
-          created_by: tpoUserId
+          deadline: safeDeadline || null,
+          created_by: creator
         }
         res = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(faPayload) })
       }
       if (res.ok) {
         const row = await res.json()
         setJobs(prev=>[row, ...prev])
+        try {
+          const tj = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs`, { cache: 'no-store' })
+          if (tj.ok) setJobs(await tj.json())
+        } catch {}
         setIsCreatingJob(false)
         setJobForm({ title:'', company:'', location:'', salary:'', type:'Full-time', description:'', requirements:'', deadline:'', job_url:'' })
       } else {
-        alert('Failed to create job')
+        try { const t = await res.text(); alert(`Failed to create job: ${t}`) } catch { alert('Failed to create job') }
       }
     } catch {}
   }

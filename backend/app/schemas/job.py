@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, date
 
 class JobBase(BaseModel):
     title: str
@@ -8,11 +8,12 @@ class JobBase(BaseModel):
     location: str
     description: str
     requirements: str
-    salary_range: Optional[str] = None
+    salary: Optional[str] = None
+    type: Optional[str] = None
     job_url: Optional[str] = None
 
 class JobCreate(JobBase):
-    application_deadline: Optional[datetime] = None
+    deadline: Optional[date] = None
     created_by: int
 
 class JobUpdate(BaseModel):
@@ -21,15 +22,16 @@ class JobUpdate(BaseModel):
     location: Optional[str] = None
     description: Optional[str] = None
     requirements: Optional[str] = None
-    salary_range: Optional[str] = None
-    application_deadline: Optional[datetime] = None
-    is_active: Optional[bool] = None
+    salary: Optional[str] = None
+    type: Optional[str] = None
+    deadline: Optional[date] = None
+    status: Optional[str] = None
 
 class JobResponse(JobBase):
     id: int
-    application_deadline: Optional[datetime] = None
+    deadline: Optional[date] = None
     is_active: bool
-    created_by: int
+    created_by: Optional[int] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
     applicants: Optional[int] = None
@@ -40,7 +42,6 @@ class JobResponse(JobBase):
 class JobApplicationBase(BaseModel):
     job_id: int
     user_id: int
-    resume_id: int
     cover_letter: Optional[str] = None
 
 class JobApplicationCreate(JobApplicationBase):
