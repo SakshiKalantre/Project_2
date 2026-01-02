@@ -361,12 +361,30 @@ export default function TPODashboard() {
   const postJob = async () => {
     try {
       const payload = { ...jobForm, created_by: tpoUserId }
-      const res = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
+      let res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/jobs`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
+      if (!res.ok) {
+        const dateStr = (jobForm.deadline || '').slice(0,10)
+        const iso = dateStr ? `${dateStr}T00:00:00Z` : null
+        const faPayload: any = {
+          title: jobForm.title,
+          company: jobForm.company,
+          location: jobForm.location,
+          description: jobForm.description,
+          requirements: jobForm.requirements,
+          salary_range: jobForm.salary || null,
+          job_url: jobForm.job_url || null,
+          application_deadline: iso,
+          created_by: tpoUserId
+        }
+        res = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(faPayload) })
+      }
       if (res.ok) {
         const row = await res.json()
         setJobs(prev=>[row, ...prev])
         setIsCreatingJob(false)
         setJobForm({ title:'', company:'', location:'', salary:'', type:'Full-time', description:'', requirements:'', deadline:'', job_url:'' })
+      } else {
+        alert('Failed to create job')
       }
     } catch {}
   }

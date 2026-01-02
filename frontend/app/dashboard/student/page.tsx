@@ -232,6 +232,7 @@ export default function StudentDashboard() {
   }, [activeTab, userId])
 
   useEffect(() => {
+    let poll: any
     const refreshJobs = async () => {
       try {
         if (activeTab === 'jobs') {
@@ -244,6 +245,8 @@ export default function StudentDashboard() {
       } catch {}
     }
     refreshJobs()
+    if (activeTab === 'jobs') poll = setInterval(refreshJobs, 15000)
+    return () => { if (poll) clearInterval(poll) }
   }, [activeTab])
 
   useEffect(() => {
