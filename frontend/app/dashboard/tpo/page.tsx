@@ -872,41 +872,75 @@ export default function TPODashboard() {
                 ) : null}
                 
                 <div className="grid grid-cols-1 gap-6">
-                  {jobs.filter((j)=> (j.status || 'Active') !== 'Closed').map((job) => (
-                    <Card key={job.id} className="border-none shadow-md">
+                  {jobs.map((job) => (
+                    <Card key={job.id} className={`border-none shadow-md transition-opacity ${job.status === 'Closed' ? 'opacity-75 bg-gray-50' : ''}`}>
                       <CardContent className="p-6">
-                        <div className="flex justify-between">
-                          <div>
+                        <div className="flex justify-between items-start">
+                          <div className="w-full max-w-md">
                             {editingJobId === job.id ? (
-                              <div className="space-y-2">
-                                <Input placeholder="Job Title" value={editJobForm.title} onChange={(e)=>setEditJobForm({...editJobForm, title:e.target.value})} />
-                                <Input placeholder="Company" value={editJobForm.company} onChange={(e)=>setEditJobForm({...editJobForm, company:e.target.value})} />
-                                <Input placeholder="Location" value={editJobForm.location} onChange={(e)=>setEditJobForm({...editJobForm, location:e.target.value})} />
+                              <div className="space-y-4 border p-4 rounded-lg bg-white border-maroon/20">
+                                <h4 className="font-semibold text-maroon mb-2 flex items-center">
+                                  <Edit className="w-4 h-4 mr-2" />
+                                  Editing Job Details
+                                </h4>
+                                <div>
+                                  <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Job Title</Label>
+                                  <Input 
+                                    className="mt-1 border-maroon/20 focus:border-maroon"
+                                    placeholder="Job Title" 
+                                    value={editJobForm.title} 
+                                    onChange={(e)=>setEditJobForm({...editJobForm, title:e.target.value})} 
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Company Name</Label>
+                                  <Input 
+                                    className="mt-1 border-maroon/20 focus:border-maroon"
+                                    placeholder="Company" 
+                                    value={editJobForm.company} 
+                                    onChange={(e)=>setEditJobForm({...editJobForm, company:e.target.value})} 
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Location</Label>
+                                  <Input 
+                                    className="mt-1 border-maroon/20 focus:border-maroon"
+                                    placeholder="Location" 
+                                    value={editJobForm.location} 
+                                    onChange={(e)=>setEditJobForm({...editJobForm, location:e.target.value})} 
+                                  />
+                                </div>
                               </div>
                             ) : (
                               <>
-                                <h3 className="text-xl font-semibold">{job.title}</h3>
-                                <p className="text-gray-600">{job.company} • {job.location}</p>
+                                <h3 className="text-xl font-semibold text-gray-900">{job.title}</h3>
+                                <p className="text-gray-600 mt-1">{job.company} • {job.location}</p>
                               </>
                             )}
                           </div>
-                          <Badge variant="secondary" className="bg-gold text-maroon">
+                          <Badge variant="secondary" className={`${editingJobId === job.id ? (editJobForm.status === 'Active' ? "bg-green-100 text-green-800 border-green-200" : "bg-gray-100 text-gray-800 border-gray-200") : (job.status === 'Active' ? "bg-green-100 text-green-800 border-green-200" : "bg-red-100 text-red-800 border-red-200")} px-3 py-1`}>
                             {editingJobId === job.id ? editJobForm.status : job.status}
                           </Badge>
                         </div>
                         
-                        <div className="mt-4 flex flex-wrap gap-4">
-                          <div className="flex items-center text-gray-600">
-                            <Users className="mr-2 h-4 w-4" />
-                            <span>{openApplicantsJobId === job.id ? applicants.length : (job.applicants ?? 0)} Applicants</span>
+                        <div className="mt-6 flex flex-wrap gap-6">
+                          <div className="flex items-center p-3 bg-blue-50 rounded-lg border border-blue-100">
+                            <Users className="mr-2 h-5 w-5 text-blue-600" />
+                            <div>
+                              <span className="text-xs text-blue-600 font-semibold uppercase">Total Applicants</span>
+                              <p className="text-lg font-bold text-blue-900">{openApplicantsJobId === job.id ? applicants.length : (job.applicants ?? 0)}</p>
+                            </div>
                           </div>
-                          <div className="flex items-center text-gray-600">
-                            <Calendar className="mr-2 h-4 w-4" />
-                            <span>Posted {job.posted}</span>
+                          <div className="flex items-center p-3 bg-gray-50 rounded-lg border border-gray-100">
+                            <Calendar className="mr-2 h-5 w-5 text-gray-500" />
+                            <div>
+                              <span className="text-xs text-gray-500 font-semibold uppercase">Posted Date</span>
+                              <p className="text-sm font-medium text-gray-900">{job.posted ? new Date(job.posted).toLocaleDateString() : 'N/A'}</p>
+                            </div>
                           </div>
                         </div>
                         
-                        <div className="mt-6 flex space-x-3">
+                        <div className="mt-6 flex space-x-3 pt-4 border-t">
                           <Button variant="outline" onClick={async()=>{
                             try {
                               if (openApplicantsJobId === job.id) { setOpenApplicantsJobId(null); setApplicants([]); return }
@@ -956,17 +990,22 @@ export default function TPODashboard() {
                               Edit
                             </Button>
                           )}
-                          <Button variant="destructive" className="bg-red-600 hover:bg-red-700 text-white" onClick={async()=>{
+                          <Button 
+                            variant={job.status === 'Active' ? "destructive" : "outline"} 
+                            className={job.status === 'Active' ? "bg-red-600 hover:bg-red-700 text-white" : "border-green-600 text-green-600 hover:bg-green-50"} 
+                            onClick={async()=>{
                             try {
-                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs/${job.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ status: 'Closed' }) })
+                              const newStatus = job.status === 'Active' ? 'Closed' : 'Active'
+                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs/${job.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ status: newStatus }) })
                               if (res.ok) {
                                 await res.json()
-                                setJobs(prev => prev.filter(j => j.id !== job.id))
+                                // Update local state instead of removing
+                                setJobs(prev => prev.map(j => j.id === job.id ? { ...j, status: newStatus } : j))
                               }
                             } catch {}
                           }}>
-                            <X className="mr-2 h-4 w-4" />
-                            Close
+                            {job.status === 'Active' ? <X className="mr-2 h-4 w-4" /> : <Check className="mr-2 h-4 w-4" />}
+                            {job.status === 'Active' ? 'Close Job' : 'Reopen Job'}
                           </Button>
                         </div>
                         {openApplicantsJobId === job.id && (
