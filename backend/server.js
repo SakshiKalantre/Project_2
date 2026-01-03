@@ -1336,7 +1336,7 @@ app.post('/api/v1/users/register', async (req, res) => {
 app.get('/api/v1/tpo/jobs', async (req, res) => {
   try {
     const result = await dbClient.query(`
-      SELECT j.id, j.title, j.company, j.location, j.posted, j.status, j.job_url,
+      SELECT j.id, j.title, j.company, j.location, j.posted, j.status, j.job_url, j.is_active,
              COALESCE((SELECT COUNT(a.id) FROM job_applications a WHERE a.job_id = j.id),0)::int AS applicants
       FROM jobs j
       ORDER BY j.posted DESC`)
@@ -1351,9 +1351,9 @@ app.post('/api/v1/tpo/jobs', async (req, res) => {
     const { title, company, location, salary, type, description, requirements, deadline, created_by, job_url } = req.body || {}
     if (!title || !company) return res.status(400).json({ error: 'Missing title/company' })
     const result = await dbClient.query(
-      `INSERT INTO jobs (title, company, location, salary, type, description, requirements, deadline, status, created_by, posted, updated_at, job_url)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'Active',$9,NOW(),NOW(),$10)
-       RETURNING id, title, company, location, salary, type, posted, deadline, status, job_url`,
+      `INSERT INTO jobs (title, company, location, salary, type, description, requirements, deadline, status, created_by, posted, updated_at, job_url, is_active)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'Active',$9,NOW(),NOW(),$10, TRUE)
+       RETURNING id, title, company, location, salary, type, posted, deadline, status, job_url, is_active`,
       [title, company, location || '', salary || '', type || 'Full-time', description || '', requirements || '', deadline || null, created_by || null, job_url || null]
     )
     const msg = `Company: ${company}. Location: ${location || '—'}. Type: ${type || 'Full-time'}`
