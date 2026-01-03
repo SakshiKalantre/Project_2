@@ -958,7 +958,7 @@ export default function TPODashboard() {
                           </div>
                           <div className="flex items-center text-gray-600">
                             <Calendar className="mr-2 h-4 w-4" />
-                            <span>Posted {job.posted}</span>
+                            <span>Posted {(job.posted ? new Date(job.posted).toLocaleString() : (job.created_at ? new Date(job.created_at).toLocaleString() : ''))}</span>
                           </div>
                         </div>
                         

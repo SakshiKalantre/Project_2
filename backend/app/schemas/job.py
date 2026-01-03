@@ -5,16 +5,16 @@ from datetime import datetime, date
 class JobBase(BaseModel):
     title: str
     company: str
-    location: str
-    description: str
-    requirements: str
+    location: Optional[str] = None
+    description: Optional[str] = None
+    requirements: Optional[str] = None
     salary: Optional[str] = None
     type: Optional[str] = None
     job_url: Optional[str] = None
 
 class JobCreate(JobBase):
     deadline: Optional[date] = None
-    created_by: int
+    created_by: Optional[int] = None
 
 class JobUpdate(BaseModel):
     title: Optional[str] = None

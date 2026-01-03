@@ -37,7 +37,14 @@ def create_job(job: JobCreate, db: Session = Depends(get_db)):
 
 @router.get("/", response_model=List[JobResponse])
 def get_jobs(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    rows = db.query(Job).filter(func.lower(Job.status) != 'closed').order_by(Job.posted.desc()).offset(skip).limit(limit).all()
+    rows = (
+        db.query(Job)
+        .filter(func.coalesce(Job.status, 'Active') != 'Closed')
+        .order_by(Job.posted.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
     out: List[JobResponse] = []
     for j in rows:
         cnt = db.query(func.count(JobApplication.id)).filter(JobApplication.job_id == j.id).scalar() or 0
