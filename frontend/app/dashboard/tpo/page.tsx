@@ -250,7 +250,7 @@ export default function TPODashboard() {
     const refreshApplicants = async () => {
       try {
         if (openApplicantsJobId) {
-          const res = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs/${openApplicantsJobId}/applications`)
+          const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/jobs/${openApplicantsJobId}/applications`)
           if (res.ok) setApplicants(await res.json())
         }
       } catch {}
@@ -966,7 +966,7 @@ export default function TPODashboard() {
                           <Button variant="outline" onClick={async()=>{
                             try {
                               if (openApplicantsJobId === job.id) { setOpenApplicantsJobId(null); setApplicants([]); return }
-                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs/${job.id}/applications`)
+                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/jobs/${job.id}/applications`)
                               if (res.ok) {
                                 const rows = await res.json()
                                 setApplicants(rows)
@@ -980,7 +980,7 @@ export default function TPODashboard() {
                           {openApplicantsJobId === job.id && (
                             <Button variant="outline" onClick={async()=>{
                               try {
-                                const res = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs/${job.id}/applications`)
+                                const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/jobs/${job.id}/applications`)
                                 if (res.ok) setApplicants(await res.json())
                               } catch {}
                             }}>Refresh</Button>
@@ -990,7 +990,7 @@ export default function TPODashboard() {
                               <Button variant="outline" onClick={async()=>{
                                 try {
                                   const payload:any = { title: editJobForm.title || null, company: editJobForm.company || null, location: editJobForm.location || null, status: editJobForm.status || null }
-                                  const res = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs/${job.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
+                                  const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/jobs/${job.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
                                   if (res.ok) {
                                     const updated = await res.json()
                                     setJobs(prev => prev.map(j => j.id === job.id ? { ...j, ...updated } : j))
@@ -1012,9 +1012,9 @@ export default function TPODashboard() {
                               Edit
                             </Button>
                           )}
-                          <Button variant="destructive" className="bg-red-600 hover:bg-red-700 text-white" onClick={async()=>{
+                            <Button variant="destructive" className="bg-red-600 hover:bg-red-700 text-white" onClick={async()=>{
                             try {
-                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs/${job.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ status: 'Closed' }) })
+                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/jobs/${job.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ status: 'Closed' }) })
                               if (res.ok) {
                                 await res.json()
                                 setJobs(prev => prev.filter(j => j.id !== job.id))
