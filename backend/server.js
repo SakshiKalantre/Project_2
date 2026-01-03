@@ -1376,8 +1376,14 @@ app.put('/api/v1/tpo/jobs/:job_id', async (req, res) => {
       `UPDATE jobs SET 
         title = COALESCE($1,title), company = COALESCE($2,company), location = COALESCE($3,location),
         salary = COALESCE($4,salary), type = COALESCE($5,type), description = COALESCE($6,description),
-        requirements = COALESCE($7,requirements), deadline = COALESCE($8,deadline), status = COALESCE($9,status),
-        is_active = CASE WHEN $9 = 'Closed' THEN FALSE WHEN $9 = 'Active' THEN TRUE ELSE is_active END,
+        requirements = COALESCE($7,requirements), deadline = COALESCE($8,deadline), 
+        status = CASE WHEN status = 'Closed' THEN 'Closed' ELSE COALESCE($9,status) END,
+        is_active = CASE 
+          WHEN status = 'Closed' THEN FALSE 
+          WHEN $9 = 'Closed' THEN FALSE 
+          WHEN $9 = 'Active' THEN TRUE 
+          ELSE is_active 
+        END,
         job_url = COALESCE($10,job_url), updated_at = NOW()
        WHERE id = $11
        RETURNING id, title, company, location, salary, type, posted, deadline, status, job_url, is_active`,
@@ -1398,8 +1404,14 @@ app.put('/api/v1/jobs/:job_id', async (req, res) => {
       `UPDATE jobs SET 
         title = COALESCE($1,title), company = COALESCE($2,company), location = COALESCE($3,location),
         salary = COALESCE($4,salary), type = COALESCE($5,type), description = COALESCE($6,description),
-        requirements = COALESCE($7,requirements), deadline = COALESCE($8,deadline), status = COALESCE($9,status),
-        is_active = CASE WHEN $9 = 'Closed' THEN FALSE WHEN $9 = 'Active' THEN TRUE ELSE is_active END,
+        requirements = COALESCE($7,requirements), deadline = COALESCE($8,deadline), 
+        status = CASE WHEN status = 'Closed' THEN 'Closed' ELSE COALESCE($9,status) END,
+        is_active = CASE 
+          WHEN status = 'Closed' THEN FALSE 
+          WHEN $9 = 'Closed' THEN FALSE 
+          WHEN $9 = 'Active' THEN TRUE 
+          ELSE is_active 
+        END,
         job_url = COALESCE($10,job_url), updated_at = NOW()
        WHERE id = $11
        RETURNING id, title, company, location, salary, type, posted, deadline, status, job_url, is_active`,
