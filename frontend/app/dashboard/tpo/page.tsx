@@ -80,7 +80,8 @@ export default function TPODashboard() {
       }
       
       const token = await getToken()
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {}
+      const headers: Record<string, string> = {}
+      if (token) headers['Authorization'] = `Bearer ${token}`
 
       if (email) {
         const u = await fetch(`${API_BASE_DEFAULT}/api/v1/users/by-email/${encodeURIComponent(email)}`, { headers })
@@ -186,7 +187,8 @@ export default function TPODashboard() {
       if (!eventForm.title.trim()) { alert('Title is required'); return }
       let creator = tpoUserId
       const token = await getToken()
-      const headers = { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
 
       if (!creator) {
         try {
@@ -349,7 +351,8 @@ export default function TPODashboard() {
   const handleApproveProfile = async (userId: number) => {
     try {
       const token = await getToken()
-      const headers = { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
       const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/profiles/${userId}/approve`, { method: 'PUT', headers, body: JSON.stringify({ notes: 'Approved by TPO' }) })
       fetchTpoAndData()
     } catch {}
@@ -359,7 +362,8 @@ export default function TPODashboard() {
     try {
       if (openDetailsUserId === userId) { setOpenDetailsUserId(null); setDetailData(null); return }
       const token = await getToken()
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {}
+      const headers: Record<string, string> = {}
+      if (token) headers['Authorization'] = `Bearer ${token}`
       const u = await fetch(`${API_BASE_DEFAULT}/api/v1/users/${userId}?t=${Date.now()}`, { cache:'no-store', headers })
       const p = await fetch(`${API_BASE_DEFAULT}/api/v1/users/${userId}/profile?t=${Date.now()}`, { cache:'no-store', headers })
       const ujson = u.ok ? await u.json() : null
@@ -372,7 +376,8 @@ export default function TPODashboard() {
   const handleApproveResume = async (fileId: number) => {
     try {
       const token = await getToken()
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {}
+      const headers: Record<string, string> = {}
+      if (token) headers['Authorization'] = `Bearer ${token}`
       await fetch(`${API_BASE_DEFAULT}/api/v1/files/resumes/${fileId}/verify`, { method: 'PUT', headers })
       fetchTpoAndData()
     } catch {}
@@ -382,7 +387,8 @@ export default function TPODashboard() {
     try {
       const payload = { ...jobForm, created_by: tpoUserId }
       const token = await getToken()
-      const headers = { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
       const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/jobs`, { method:'POST', headers, body: JSON.stringify(payload) })
       if (res.ok) {
         const row = await res.json()
@@ -1286,8 +1292,9 @@ export default function TPODashboard() {
                             <>
                               <Button variant="outline" onClick={async()=>{
                                 try {
+                                  const token = await getToken()
                                   const payload:any = { title: editEventForm.title || null, location: editEventForm.location || null, date: editEventForm.date || null, time: editEventForm.time || null, status: editEventForm.status || null }
-                                  const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
+                                  const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}`, { method:'PUT', headers:{'Content-Type':'application/json', 'Authorization': `Bearer ${token}`}, body: JSON.stringify(payload) })
                                   if (res.ok) {
                                     const updated = await res.json()
                                     setTpoEvents(prev => prev.map(e => e.id === event.id ? { ...e, ...updated } : e))
@@ -1308,13 +1315,15 @@ export default function TPODashboard() {
                           )}
                           <Button variant="outline" onClick={async()=>{
                             try {
-                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}/reminders`, { method:'POST' })
+                              const token = await getToken()
+                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}/reminders`, { method:'POST', headers: { 'Authorization': `Bearer ${token}` } })
                               if (res.ok) alert('Reminders sent')
                             } catch { alert('Failed to send reminders') }
                           }}>Send Reminder</Button>
                           <Button variant="destructive" className="bg-red-600 hover:bg-red-700 text-white" onClick={async()=>{
                             try {
-                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ status: 'Cancelled' }) })
+                              const token = await getToken()
+                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}`, { method:'PUT', headers:{'Content-Type':'application/json', 'Authorization': `Bearer ${token}`}, body: JSON.stringify({ status: 'Cancelled' }) })
                               if (res.ok) {
                                 setTpoEvents(prev => prev.filter(e => e.id !== event.id))
                               }
@@ -1322,7 +1331,8 @@ export default function TPODashboard() {
                           }}>Cancel</Button>
                           <Button variant="outline" onClick={async()=>{
                             try {
-                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ status: 'Completed' }) })
+                              const token = await getToken()
+                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}`, { method:'PUT', headers:{'Content-Type':'application/json', 'Authorization': `Bearer ${token}`}, body: JSON.stringify({ status: 'Completed' }) })
                               if (res.ok) {
                                 const updated = await res.json()
                                 setTpoEvents(prev => prev.map(e => e.id === event.id ? { ...e, ...updated } : e))
@@ -1396,9 +1406,10 @@ export default function TPODashboard() {
                         <Button className="bg-maroon hover:bg-maroon/90" onClick={async()=>{
                           try {
                             if (!notificationTitle.trim() || !notificationMessage.trim()) { alert('Please provide title and message'); return }
+                            const token = await getToken()
                             const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/notifications/broadcast`, {
                               method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
+                              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                               body: JSON.stringify({ title: notificationTitle.trim(), message: notificationMessage.trim() })
                             })
                             if (res.ok) {
