@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import LogoutButton from '@/components/LogoutButton'
-import { useUser, useAuth } from '@clerk/nextjs'
+import { useUser } from '@clerk/nextjs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -28,7 +28,6 @@ const API_BASE_DEFAULT = process.env.NEXT_PUBLIC_API_URL || 'https://project-2-p
 
 export default function TPODashboard() {
   const { user } = useUser()
-  const { getToken } = useAuth()
   const [activeTab, setActiveTab] = useState('profiles')
   const [isCreatingJob, setIsCreatingJob] = useState(false)
   const [jobs, setJobs] = useState<Array<any>>([])
@@ -78,13 +77,8 @@ export default function TPODashboard() {
         if (typeof window !== 'undefined') window.location.href = '/sign-up'
         return
       }
-      
-      const token = await getToken()
-      const headers: Record<string, string> = {}
-      if (token) headers['Authorization'] = `Bearer ${token}`
-
       if (email) {
-        const u = await fetch(`${API_BASE_DEFAULT}/api/v1/users/by-email/${encodeURIComponent(email)}`, { headers })
+        const u = await fetch(`${API_BASE_DEFAULT}/api/v1/users/by-email/${encodeURIComponent(email)}`)
         if (u.ok) {
           const userData = await u.json()
           setTpoUserId(userData.id)
@@ -92,7 +86,7 @@ export default function TPODashboard() {
           setTpoName(`${userData.first_name || ''} ${userData.last_name || ''}`.trim())
           // load tpo profile
           try {
-            const prf = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/${userData.id}/profile`, { headers })
+            const prf = await fetch(`/api/tpo/profile/${userData.id}`)
             if (prf.ok) {
               const pjson = await prf.json()
               setTpoProfile({ phone: pjson.phone || '' })
@@ -104,7 +98,7 @@ export default function TPODashboard() {
           return
         }
       }
-      const p = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/pending-profiles`, { cache: 'no-store', headers })
+      const p = await fetch(`/api/tpo/pending-profiles`, { cache: 'no-store' })
       if (p.ok) {
         const rows = await p.json()
         setPendingProfiles(rows.map((r:any)=>{
@@ -119,7 +113,7 @@ export default function TPODashboard() {
           }
         }))
       }
-      const pr = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/pending-resumes`, { headers })
+      const pr = await fetch(`${API_BASE_DEFAULT}/api/v1/files/tpo/pending-resumes`)
       if (pr.ok) {
         const rows = await pr.json()
         setPendingResumes(rows.map((r:any)=>({
@@ -131,7 +125,7 @@ export default function TPODashboard() {
           status: r.is_verified ? 'Verified' : 'Pending'
         })))
       }
-      const vr = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/verified-resumes`, { headers })
+      const vr = await fetch(`${API_BASE_DEFAULT}/api/v1/files/tpo/verified-resumes`)
       if (vr.ok) {
         const rows = await vr.json()
         setVerifiedResumes(rows.map((r:any)=>({
@@ -143,22 +137,22 @@ export default function TPODashboard() {
           status: 'Verified'
         })))
       }
-      const aps = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/approved-students`, { headers })
+      const aps = await fetch(`${API_BASE_DEFAULT}/api/v1/users/tpo/approved-students`)
       if (aps.ok) {
         const rows = await aps.json()
         setApprovedStudents(rows)
       }
-      const tj = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/jobs`, { headers })
+      const tj = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs`)
       if (tj.ok) {
         const jobsRows = await tj.json()
         setJobs(jobsRows)
       }
-      const evs = await fetch(`${API_BASE_DEFAULT}/api/v1/events${eventFilter==='All'?'':`?status=${encodeURIComponent(eventFilter)}`}`, { headers })
+      const evs = await fetch(`${API_BASE_DEFAULT}/api/v1/events${eventFilter==='All'?'':`?status=${encodeURIComponent(eventFilter)}`}`)
       if (evs.ok) {
         const rows = await evs.json()
         setTpoEvents(rows)
       }
-    } catch (e) { console.error(e) }
+    } catch {}
   }
 
   const jobPostings = [
@@ -186,10 +180,6 @@ export default function TPODashboard() {
     try {
       if (!eventForm.title.trim()) { alert('Title is required'); return }
       let creator = tpoUserId
-      const token = await getToken()
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (token) headers['Authorization'] = `Bearer ${token}`
-
       if (!creator) {
         try {
           let email: string | null = null
@@ -203,7 +193,7 @@ export default function TPODashboard() {
             email = current?.email || null
           }
           if (email) {
-            const u = await fetch(`${API_BASE_DEFAULT}/api/v1/users/by-email/${encodeURIComponent(email)}`, { headers })
+            const u = await fetch(`${API_BASE_DEFAULT}/api/v1/users/by-email/${encodeURIComponent(email)}`)
             if (u.ok) { const uj = await u.json(); creator = uj.id; setTpoUserId(uj.id) }
           }
         } catch {}
@@ -211,14 +201,14 @@ export default function TPODashboard() {
       const dateStr = (eventForm.date || '').slice(0,10)
       const payloadFull: any = { title: eventForm.title.trim(), description: eventForm.description || '', location: eventForm.location || '', time: (eventForm.time || '').trim(), status: 'Upcoming', form_url: eventForm.form_url || '', category: eventForm.category || '' }
       if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) payloadFull.date = dateStr
-      let res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events`, { method:'POST', headers, body: JSON.stringify(payloadFull) })
+      let res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payloadFull) })
       if (!res.ok) {
         try {
           const errText = await res.text()
           console.error('Create event error:', errText)
         } catch {}
         const payloadMinimal = { title: eventForm.title.trim() }
-        res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events`, { method:'POST', headers, body: JSON.stringify(payloadMinimal) })
+        res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payloadMinimal) })
         if (!res.ok) {
           try { const errText2 = await res.text(); console.error('Create event minimal error:', errText2) } catch {}
           alert('Failed to create event')
@@ -228,7 +218,7 @@ export default function TPODashboard() {
       const row = await res.json()
       setTpoEvents(prev => [row, ...prev])
       try {
-        const evs = await fetch(`${API_BASE_DEFAULT}/api/v1/events`, { headers })
+        const evs = await fetch(`${API_BASE_DEFAULT}/api/v1/events`)
         if (evs.ok) setTpoEvents(await evs.json())
       } catch {}
       setIsCreatingEvent(false)
@@ -260,10 +250,7 @@ export default function TPODashboard() {
     const refreshApplicants = async () => {
       try {
         if (openApplicantsJobId) {
-          const token = await getToken()
-          const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/jobs/${openApplicantsJobId}/applications`, {
-             headers: { 'Authorization': `Bearer ${token}` }
-          })
+          const res = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs/${openApplicantsJobId}/applications`)
           if (res.ok) setApplicants(await res.json())
         }
       } catch {}
@@ -285,10 +272,7 @@ export default function TPODashboard() {
     const refreshJobs = async () => {
       try {
         if (activeTab === 'jobs') {
-          const token = await getToken()
-          const tj = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/jobs`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          })
+          const tj = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/jobs`)
           if (tj.ok) setJobs(await tj.json())
         }
       } catch {}
@@ -350,10 +334,7 @@ export default function TPODashboard() {
 
   const handleApproveProfile = async (userId: number) => {
     try {
-      const token = await getToken()
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (token) headers['Authorization'] = `Bearer ${token}`
-      const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/profiles/${userId}/approve`, { method: 'PUT', headers, body: JSON.stringify({ notes: 'Approved by TPO' }) })
+      const res = await fetch(`${API_BASE_DEFAULT}/api/v1/users/tpo/profiles/${userId}/approve`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ notes: 'Approved by TPO' }) })
       fetchTpoAndData()
     } catch {}
   }
@@ -361,11 +342,8 @@ export default function TPODashboard() {
   const handleViewDetails = async (userId: number) => {
     try {
       if (openDetailsUserId === userId) { setOpenDetailsUserId(null); setDetailData(null); return }
-      const token = await getToken()
-      const headers: Record<string, string> = {}
-      if (token) headers['Authorization'] = `Bearer ${token}`
-      const u = await fetch(`${API_BASE_DEFAULT}/api/v1/users/${userId}?t=${Date.now()}`, { cache:'no-store', headers })
-      const p = await fetch(`${API_BASE_DEFAULT}/api/v1/users/${userId}/profile?t=${Date.now()}`, { cache:'no-store', headers })
+      const u = await fetch(`${API_BASE_DEFAULT}/api/v1/users/${userId}?t=${Date.now()}`, { cache:'no-store' })
+      const p = await fetch(`${API_BASE_DEFAULT}/api/v1/users/${userId}/profile?t=${Date.now()}`, { cache:'no-store' })
       const ujson = u.ok ? await u.json() : null
       const pjson = p.ok ? await p.json() : null
       setDetailData({ user: ujson, profile: pjson })
@@ -375,10 +353,7 @@ export default function TPODashboard() {
 
   const handleApproveResume = async (fileId: number) => {
     try {
-      const token = await getToken()
-      const headers: Record<string, string> = {}
-      if (token) headers['Authorization'] = `Bearer ${token}`
-      await fetch(`${API_BASE_DEFAULT}/api/v1/files/resumes/${fileId}/verify`, { method: 'PUT', headers })
+      await fetch(`${API_BASE_DEFAULT}/api/v1/files/resumes/${fileId}/verify`, { method: 'PUT' })
       fetchTpoAndData()
     } catch {}
   }
@@ -386,24 +361,14 @@ export default function TPODashboard() {
   const postJob = async () => {
     try {
       const payload = { ...jobForm, created_by: tpoUserId }
-      const token = await getToken()
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (token) headers['Authorization'] = `Bearer ${token}`
-      const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/jobs`, { method:'POST', headers, body: JSON.stringify(payload) })
+      const res = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
       if (res.ok) {
         const row = await res.json()
         setJobs(prev=>[row, ...prev])
         setIsCreatingJob(false)
         setJobForm({ title:'', company:'', location:'', salary:'', type:'Full-time', description:'', requirements:'', deadline:'', job_url:'' })
-      } else {
-        const err = await res.text()
-        console.error('Failed to post job:', err)
-        alert('Failed to post job')
       }
-    } catch (e) {
-        console.error('Error posting job:', e)
-        alert('Error posting job')
-    }
+    } catch {}
   }
 
   return (
@@ -530,11 +495,9 @@ export default function TPODashboard() {
                       <Button className="bg-maroon hover:bg-maroon/90" onClick={async()=>{
                         try {
                           if (!tpoUserId) return
-                          const token = await getToken()
-                          const headers = { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
-                          const s = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/${tpoUserId}/profile`, { method:'POST', headers, body: JSON.stringify({ phone: tpoProfile.phone || null }) })
+                          const s = await fetch(`/api/tpo/profile/${tpoUserId}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ phone: tpoProfile.phone || null }) })
                           if (s.ok) {
-                            const prf = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/${tpoUserId}/profile?t=${Date.now()}`, { cache:'no-store', headers })
+                            const prf = await fetch(`/api/tpo/profile/${tpoUserId}?t=${Date.now()}`, { cache:'no-store' })
                             if (prf.ok) {
                               const pjson = await prf.json()
                               setTpoProfile({ phone: pjson.phone || '' })
@@ -543,9 +506,9 @@ export default function TPODashboard() {
                           const parts = (tpoName || '').trim().replace(/\s+/g,' ').split(' ')
                           const first = parts[0] || null
                           const last = parts.slice(1).join(' ') || null
-                          const upd = await fetch(`${API_BASE_DEFAULT}/api/v1/users/${tpoUserId}`, { method:'PUT', headers, body: JSON.stringify({ first_name: first, last_name: last }) })
+                          const upd = await fetch(`${API_BASE_DEFAULT}/api/v1/users/${tpoUserId}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ first_name: first, last_name: last }) })
                           if (upd.ok) {
-                            const ures = await fetch(`${API_BASE_DEFAULT}/api/v1/users/${tpoUserId}?t=${Date.now()}`, { cache:'no-store', headers })
+                            const ures = await fetch(`${API_BASE_DEFAULT}/api/v1/users/${tpoUserId}?t=${Date.now()}`, { cache:'no-store' })
                             if (ures.ok) {
                               const ujson = await ures.json()
                               const nm = (`${ujson.first_name || ''} ${ujson.last_name || ''}`).trim()
@@ -908,262 +871,162 @@ export default function TPODashboard() {
                   </Card>
                 ) : null}
                 
-                <div className="space-y-8">
-                  {/* Active Jobs Section */}
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
-                      <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
-                      Active Jobs
-                    </h3>
-                    <div className="grid grid-cols-1 gap-6">
-                      {jobs.filter(j => j.status === 'Active').length === 0 && (
-                        <p className="text-gray-500 italic">No active job postings.</p>
-                      )}
-                      {jobs.filter(j => j.status === 'Active').map((job) => (
-                        <Card key={job.id} className="border-none shadow-md">
-                          <CardContent className="p-6">
-                             {/* Job Card Content (Active) */}
-                             <div className="flex justify-between items-start">
-                              <div className="w-full max-w-md">
-                                {editingJobId === job.id ? (
-                                  <div className="space-y-4 border p-4 rounded-lg bg-white border-maroon/20">
-                                    <h4 className="font-semibold text-maroon mb-2 flex items-center">
-                                      <Edit className="w-4 h-4 mr-2" />
-                                      Editing Job Details
-                                    </h4>
-                                    <div>
-                                      <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Job Title</Label>
-                                      <Input className="mt-1 border-maroon/20 focus:border-maroon" placeholder="Job Title" value={editJobForm.title} onChange={(e)=>setEditJobForm({...editJobForm, title:e.target.value})} />
-                                    </div>
-                                    <div>
-                                      <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Company Name</Label>
-                                      <Input className="mt-1 border-maroon/20 focus:border-maroon" placeholder="Company" value={editJobForm.company} onChange={(e)=>setEditJobForm({...editJobForm, company:e.target.value})} />
-                                    </div>
-                                    <div>
-                                      <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Location</Label>
-                                      <Input className="mt-1 border-maroon/20 focus:border-maroon" placeholder="Location" value={editJobForm.location} onChange={(e)=>setEditJobForm({...editJobForm, location:e.target.value})} />
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <>
-                                    <h3 className="text-xl font-semibold text-gray-900">{job.title}</h3>
-                                    <p className="text-gray-600 mt-1">{job.company} • {job.location}</p>
-                                  </>
-                                )}
-                              </div>
-                              <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200 px-3 py-1">Active</Badge>
-                            </div>
-                            
-                            <div className="mt-6 flex flex-wrap gap-6">
-                              <div className="flex items-center p-3 bg-blue-50 rounded-lg border border-blue-100">
-                                <Users className="mr-2 h-5 w-5 text-blue-600" />
+                <div className="grid grid-cols-1 gap-6">
+                  {jobs.map((job) => (
+                    <Card key={job.id} className={`border-none shadow-md transition-opacity ${job.status === 'Closed' ? 'opacity-75 bg-gray-50' : ''}`}>
+                      <CardContent className="p-6">
+                        <div className="flex justify-between items-start">
+                          <div className="w-full max-w-md">
+                            {editingJobId === job.id ? (
+                              <div className="space-y-4 border p-4 rounded-lg bg-white border-maroon/20">
+                                <h4 className="font-semibold text-maroon mb-2 flex items-center">
+                                  <Edit className="w-4 h-4 mr-2" />
+                                  Editing Job Details
+                                </h4>
                                 <div>
-                                  <span className="text-xs text-blue-600 font-semibold uppercase">Total Applicants</span>
-                                  <p className="text-lg font-bold text-blue-900">{openApplicantsJobId === job.id ? applicants.length : (job.applicants ?? 0)}</p>
+                                  <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Job Title</Label>
+                                  <Input 
+                                    className="mt-1 border-maroon/20 focus:border-maroon"
+                                    placeholder="Job Title" 
+                                    value={editJobForm.title} 
+                                    onChange={(e)=>setEditJobForm({...editJobForm, title:e.target.value})} 
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Company Name</Label>
+                                  <Input 
+                                    className="mt-1 border-maroon/20 focus:border-maroon"
+                                    placeholder="Company" 
+                                    value={editJobForm.company} 
+                                    onChange={(e)=>setEditJobForm({...editJobForm, company:e.target.value})} 
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Location</Label>
+                                  <Input 
+                                    className="mt-1 border-maroon/20 focus:border-maroon"
+                                    placeholder="Location" 
+                                    value={editJobForm.location} 
+                                    onChange={(e)=>setEditJobForm({...editJobForm, location:e.target.value})} 
+                                  />
                                 </div>
                               </div>
-                              <div className="flex items-center p-3 bg-gray-50 rounded-lg border border-gray-100">
-                                <Calendar className="mr-2 h-5 w-5 text-gray-500" />
-                                <div>
-                                  <span className="text-xs text-gray-500 font-semibold uppercase">Posted Date</span>
-                                  <p className="text-sm font-medium text-gray-900">{job.posted ? new Date(job.posted).toLocaleDateString() : 'N/A'}</p>
-                                </div>
-                              </div>
+                            ) : (
+                              <>
+                                <h3 className="text-xl font-semibold text-gray-900">{job.title}</h3>
+                                <p className="text-gray-600 mt-1">{job.company} • {job.location}</p>
+                              </>
+                            )}
+                          </div>
+                          <Badge variant="secondary" className={`${editingJobId === job.id ? (editJobForm.status === 'Active' ? "bg-green-100 text-green-800 border-green-200" : "bg-gray-100 text-gray-800 border-gray-200") : (job.status === 'Active' ? "bg-green-100 text-green-800 border-green-200" : "bg-red-100 text-red-800 border-red-200")} px-3 py-1`}>
+                            {editingJobId === job.id ? editJobForm.status : job.status}
+                          </Badge>
+                        </div>
+                        
+                        <div className="mt-6 flex flex-wrap gap-6">
+                          <div className="flex items-center p-3 bg-blue-50 rounded-lg border border-blue-100">
+                            <Users className="mr-2 h-5 w-5 text-blue-600" />
+                            <div>
+                              <span className="text-xs text-blue-600 font-semibold uppercase">Total Applicants</span>
+                              <p className="text-lg font-bold text-blue-900">{openApplicantsJobId === job.id ? applicants.length : (job.applicants ?? 0)}</p>
                             </div>
-                            
-                            <div className="mt-6 flex space-x-3 pt-4 border-t">
+                          </div>
+                          <div className="flex items-center p-3 bg-gray-50 rounded-lg border border-gray-100">
+                            <Calendar className="mr-2 h-5 w-5 text-gray-500" />
+                            <div>
+                              <span className="text-xs text-gray-500 font-semibold uppercase">Posted Date</span>
+                              <p className="text-sm font-medium text-gray-900">{job.posted ? new Date(job.posted).toLocaleDateString() : 'N/A'}</p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="mt-6 flex space-x-3 pt-4 border-t">
+                          <Button variant="outline" onClick={async()=>{
+                            try {
+                              if (openApplicantsJobId === job.id) { setOpenApplicantsJobId(null); setApplicants([]); return }
+                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs/${job.id}/applications`)
+                              if (res.ok) {
+                                const rows = await res.json()
+                                setApplicants(rows)
+                                setOpenApplicantsJobId(job.id)
+                              }
+                            } catch {}
+                          }}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            View Applicants
+                          </Button>
+                          {openApplicantsJobId === job.id && (
+                            <Button variant="outline" onClick={async()=>{
+                              try {
+                                const res = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs/${job.id}/applications`)
+                                if (res.ok) setApplicants(await res.json())
+                              } catch {}
+                            }}>Refresh</Button>
+                          )}
+                          {editingJobId === job.id ? (
+                            <>
                               <Button variant="outline" onClick={async()=>{
                                 try {
-                                  if (openApplicantsJobId === job.id) { setOpenApplicantsJobId(null); setApplicants([]); return }
-                                  const token = await getToken()
-                                  const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/jobs/${job.id}/applications`, { headers: { 'Authorization': `Bearer ${token}` } })
-                                  if (res.ok) {
-                                    const rows = await res.json()
-                                    setApplicants(rows)
-                                    setOpenApplicantsJobId(job.id)
-                                  }
-                                } catch {}
-                              }}>
-                                <Eye className="mr-2 h-4 w-4" />
-                                View Applicants
-                              </Button>
-                              {openApplicantsJobId === job.id && (
-                                <Button variant="outline" onClick={async()=>{
-                                  try {
-                                    const token = await getToken()
-                                    const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/jobs/${job.id}/applications`, { headers: { 'Authorization': `Bearer ${token}` } })
-                                    if (res.ok) setApplicants(await res.json())
-                                  } catch {}
-                                }}>Refresh</Button>
-                              )}
-                              {editingJobId === job.id ? (
-                                <>
-                                  <Button variant="outline" onClick={async()=>{
-                                    try {
-                                      const payload:any = { title: editJobForm.title || null, company: editJobForm.company || null, location: editJobForm.location || null, status: 'Active' }
-                                      const token = await getToken()
-                                      const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/jobs/${job.id}`, { method:'PUT', headers:{'Content-Type':'application/json', 'Authorization': `Bearer ${token}`}, body: JSON.stringify(payload) })
-                                      if (res.ok) {
-                                        const updated = await res.json()
-                                        setJobs(prev => prev.map(j => j.id === job.id ? { ...j, ...updated } : j))
-                                        setEditingJobId(null)
-                                      }
-                                    } catch {}
-                                  }}>
-                                    <Check className="mr-2 h-4 w-4" />
-                                    Save
-                                  </Button>
-                                  <Button variant="outline" onClick={()=>{ setEditingJobId(null) }}>
-                                    <X className="mr-2 h-4 w-4" />
-                                    Cancel
-                                  </Button>
-                                </>
-                              ) : (
-                                <Button variant="outline" onClick={()=>{ setEditingJobId(job.id); setEditJobForm({ title: job.title || '', company: job.company || '', location: job.location || '', status: 'Active' }) }}>
-                                  <Edit className="mr-2 h-4 w-4" />
-                                  Edit
-                                </Button>
-                              )}
-                              <Button 
-                                variant="destructive" 
-                                className="bg-red-600 hover:bg-red-700 text-white" 
-                                onClick={async()=>{
-                                try {
-                                  const token = await getToken()
-                                  const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/jobs/${job.id}`, { method:'PUT', headers:{'Content-Type':'application/json', 'Authorization': `Bearer ${token}`}, body: JSON.stringify({ status: 'Closed' }) })
+                                  const payload:any = { title: editJobForm.title || null, company: editJobForm.company || null, location: editJobForm.location || null, status: editJobForm.status || null }
+                                  const res = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs/${job.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
                                   if (res.ok) {
                                     const updated = await res.json()
                                     setJobs(prev => prev.map(j => j.id === job.id ? { ...j, ...updated } : j))
-                                  }
-                                } catch {}
-                              }}>
-                                <X className="mr-2 h-4 w-4" />
-                                Close Job
-                              </Button>
-                            </div>
-                            {openApplicantsJobId === job.id && (
-                              <div className="mt-4 border-t pt-4">
-                                {applicants.length === 0 ? (
-                                  <p className="text-sm text-gray-600">No applications yet</p>
-                                ) : (
-                                  <div className="space-y-2">
-                                    {applicants.map((a)=> (
-                                      <div key={a.id} className="flex justify-between text-sm">
-                                        <span>{a.first_name} {a.last_name} • {a.email}</span>
-                                        <span className="text-gray-600">{new Date(a.applied_at).toLocaleString()}</span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Closed Jobs Section */}
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-500 mb-4 flex items-center">
-                      <div className="w-3 h-3 rounded-full bg-gray-400 mr-2"></div>
-                      Closed Jobs
-                    </h3>
-                    <div className="grid grid-cols-1 gap-6">
-                      {jobs.filter(j => j.status !== 'Active').length === 0 && (
-                        <p className="text-gray-500 italic">No closed jobs.</p>
-                      )}
-                      {jobs.filter(j => j.status !== 'Active').map((job) => (
-                        <Card key={job.id} className="border-none shadow-md opacity-75 bg-gray-50">
-                          <CardContent className="p-6">
-                            <div className="flex justify-between items-start">
-                              <div className="w-full max-w-md">
-                                <h3 className="text-xl font-semibold text-gray-700">{job.title}</h3>
-                                <p className="text-gray-500 mt-1">{job.company} • {job.location}</p>
-                              </div>
-                              <Badge variant="secondary" className="bg-gray-200 text-gray-700 border-gray-300 px-3 py-1">Closed</Badge>
-                            </div>
-                            
-                            <div className="mt-6 flex flex-wrap gap-6">
-                              <div className="flex items-center p-3 bg-gray-100 rounded-lg border border-gray-200">
-                                <Calendar className="mr-2 h-5 w-5 text-gray-500" />
-                                <div>
-                                  <span className="text-xs text-gray-500 font-semibold uppercase">Posted Date</span>
-                                  <p className="text-sm font-medium text-gray-700">{job.posted ? new Date(job.posted).toLocaleDateString() : 'N/A'}</p>
-                                </div>
-                              </div>
-                              {job.closed_at && (
-                                <div className="flex items-center p-3 bg-gray-100 rounded-lg border border-gray-200">
-                                  <Calendar className="mr-2 h-5 w-5 text-red-400" />
-                                  <div>
-                                    <span className="text-xs text-gray-500 font-semibold uppercase">Closed Date</span>
-                                    <p className="text-sm font-medium text-gray-700">{new Date(job.closed_at).toLocaleDateString()}</p>
-                                  </div>
-                                </div>
-                              )}
-                              <div className="flex items-center p-3 bg-gray-100 rounded-lg border border-gray-200">
-                                <Users className="mr-2 h-5 w-5 text-gray-500" />
-                                <div>
-                                  <span className="text-xs text-gray-500 font-semibold uppercase">Final Applicants</span>
-                                  <p className="text-lg font-bold text-gray-700">{job.applicants ?? 0}</p>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            <div className="mt-6 flex space-x-3 pt-4 border-t">
-                              <Button 
-                                variant="outline" 
-                                className="border-green-600 text-green-600 hover:bg-green-50" 
-                                onClick={async()=>{
-                                try {
-                                  const token = await getToken()
-                                  const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/jobs/${job.id}`, { method:'PUT', headers:{'Content-Type':'application/json', 'Authorization': `Bearer ${token}`}, body: JSON.stringify({ status: 'Active' }) })
-                                  if (res.ok) {
-                                    const updated = await res.json()
-                                    setJobs(prev => prev.map(j => j.id === job.id ? { ...j, ...updated } : j))
+                                    setEditingJobId(null)
                                   }
                                 } catch {}
                               }}>
                                 <Check className="mr-2 h-4 w-4" />
-                                Reopen Job
+                                Save
                               </Button>
-                              <Button variant="outline" onClick={async()=>{
-                                try {
-                                  if (openApplicantsJobId === job.id) { setOpenApplicantsJobId(null); setApplicants([]); return }
-                                  const token = await getToken()
-                                  const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/jobs/${job.id}/applications`, { headers: { 'Authorization': `Bearer ${token}` } })
-                                  if (res.ok) {
-                                    const rows = await res.json()
-                                    setApplicants(rows)
-                                    setOpenApplicantsJobId(job.id)
-                                  }
-                                } catch {}
-                              }}>
-                                <Eye className="mr-2 h-4 w-4" />
-                                View Applicants
+                              <Button variant="outline" onClick={()=>{ setEditingJobId(null) }}>
+                                <X className="mr-2 h-4 w-4" />
+                                Cancel
                               </Button>
-                            </div>
-                            {openApplicantsJobId === job.id && (
-                              <div className="mt-4 border-t pt-4">
-                                {applicants.length === 0 ? (
-                                  <p className="text-sm text-gray-600">No applications yet</p>
-                                ) : (
-                                  <div className="space-y-2">
-                                    {applicants.map((a)=> (
-                                      <div key={a.id} className="flex justify-between text-sm">
-                                        <span>{a.first_name} {a.last_name} • {a.email}</span>
-                                        <span className="text-gray-600">{new Date(a.applied_at).toLocaleString()}</span>
-                                      </div>
-                                    ))}
+                            </>
+                          ) : (
+                            <Button variant="outline" onClick={()=>{ setEditingJobId(job.id); setEditJobForm({ title: job.title || '', company: job.company || '', location: job.location || '', status: job.status || 'Active' }) }}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit
+                            </Button>
+                          )}
+                          <Button 
+                            variant={job.status === 'Active' ? "destructive" : "outline"} 
+                            className={job.status === 'Active' ? "bg-red-600 hover:bg-red-700 text-white" : "border-green-600 text-green-600 hover:bg-green-50"} 
+                            onClick={async()=>{
+                            try {
+                              const newStatus = job.status === 'Active' ? 'Closed' : 'Active'
+                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs/${job.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ status: newStatus }) })
+                              if (res.ok) {
+                                await res.json()
+                                // Update local state instead of removing
+                                setJobs(prev => prev.map(j => j.id === job.id ? { ...j, status: newStatus } : j))
+                              }
+                            } catch {}
+                          }}>
+                            {job.status === 'Active' ? <X className="mr-2 h-4 w-4" /> : <Check className="mr-2 h-4 w-4" />}
+                            {job.status === 'Active' ? 'Close Job' : 'Reopen Job'}
+                          </Button>
+                        </div>
+                        {openApplicantsJobId === job.id && (
+                          <div className="mt-4 border-t pt-4">
+                            {applicants.length === 0 ? (
+                              <p className="text-sm text-gray-600">No applications yet</p>
+                            ) : (
+                              <div className="space-y-2">
+                                {applicants.map((a)=> (
+                                  <div key={a.id} className="flex justify-between text-sm">
+                                    <span>{a.first_name} {a.last_name} • {a.email}</span>
+                                    <span className="text-gray-600">{new Date(a.applied_at).toLocaleString()}</span>
                                   </div>
-                                )}
+                                ))}
                               </div>
                             )}
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
               </div>
             )}
@@ -1292,9 +1155,8 @@ export default function TPODashboard() {
                             <>
                               <Button variant="outline" onClick={async()=>{
                                 try {
-                                  const token = await getToken()
                                   const payload:any = { title: editEventForm.title || null, location: editEventForm.location || null, date: editEventForm.date || null, time: editEventForm.time || null, status: editEventForm.status || null }
-                                  const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}`, { method:'PUT', headers:{'Content-Type':'application/json', 'Authorization': `Bearer ${token}`}, body: JSON.stringify(payload) })
+                                  const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
                                   if (res.ok) {
                                     const updated = await res.json()
                                     setTpoEvents(prev => prev.map(e => e.id === event.id ? { ...e, ...updated } : e))
@@ -1315,15 +1177,13 @@ export default function TPODashboard() {
                           )}
                           <Button variant="outline" onClick={async()=>{
                             try {
-                              const token = await getToken()
-                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}/reminders`, { method:'POST', headers: { 'Authorization': `Bearer ${token}` } })
+                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}/reminders`, { method:'POST' })
                               if (res.ok) alert('Reminders sent')
                             } catch { alert('Failed to send reminders') }
                           }}>Send Reminder</Button>
                           <Button variant="destructive" className="bg-red-600 hover:bg-red-700 text-white" onClick={async()=>{
                             try {
-                              const token = await getToken()
-                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}`, { method:'PUT', headers:{'Content-Type':'application/json', 'Authorization': `Bearer ${token}`}, body: JSON.stringify({ status: 'Cancelled' }) })
+                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ status: 'Cancelled' }) })
                               if (res.ok) {
                                 setTpoEvents(prev => prev.filter(e => e.id !== event.id))
                               }
@@ -1331,8 +1191,7 @@ export default function TPODashboard() {
                           }}>Cancel</Button>
                           <Button variant="outline" onClick={async()=>{
                             try {
-                              const token = await getToken()
-                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}`, { method:'PUT', headers:{'Content-Type':'application/json', 'Authorization': `Bearer ${token}`}, body: JSON.stringify({ status: 'Completed' }) })
+                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ status: 'Completed' }) })
                               if (res.ok) {
                                 const updated = await res.json()
                                 setTpoEvents(prev => prev.map(e => e.id === event.id ? { ...e, ...updated } : e))
@@ -1406,10 +1265,9 @@ export default function TPODashboard() {
                         <Button className="bg-maroon hover:bg-maroon/90" onClick={async()=>{
                           try {
                             if (!notificationTitle.trim() || !notificationMessage.trim()) { alert('Please provide title and message'); return }
-                            const token = await getToken()
                             const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/notifications/broadcast`, {
                               method: 'POST',
-                              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                              headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({ title: notificationTitle.trim(), message: notificationMessage.trim() })
                             })
                             if (res.ok) {
