@@ -742,7 +742,7 @@ app.put('/api/v1/users/:user_id', async (req, res) => {
 
 app.get('/api/v1/jobs', async (req, res) => {
   try {
-    const result = await dbClient.query(`SELECT id, title, company, location, salary, type, posted, deadline, status, job_url FROM jobs WHERE is_active = TRUE ORDER BY posted DESC`)
+    const result = await dbClient.query(`SELECT id, title, company, location, salary, type, posted, deadline, status, job_url FROM jobs WHERE is_active = TRUE AND status != 'Closed' ORDER BY posted DESC`)
     res.json(result.rows)
   } catch (error) {
         res.status(500).json({ error: 'Failed to load jobs', details: String(error && error.message || '') })
@@ -1336,7 +1336,8 @@ app.post('/api/v1/users/register', async (req, res) => {
 app.get('/api/v1/tpo/jobs', async (req, res) => {
   try {
     const result = await dbClient.query(`
-      SELECT j.id, j.title, j.company, j.location, j.posted, j.status, j.job_url, j.is_active,
+      SELECT j.id, j.title, j.company, j.location, j.posted, j.status, j.job_url, 
+             CASE WHEN j.status = 'Closed' THEN FALSE ELSE j.is_active END as is_active,
              COALESCE((SELECT COUNT(a.id) FROM job_applications a WHERE a.job_id = j.id),0)::int AS applicants
       FROM jobs j
       ORDER BY j.posted DESC`)
