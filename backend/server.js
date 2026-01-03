@@ -58,11 +58,11 @@ dbClient.connect().then(() => {
   dbClient.query('ALTER TABLE jobs ADD COLUMN IF NOT EXISTS location TEXT;')
     .then(()=>console.log('✓ Ensured jobs.location column'))
     .catch(()=>{})
-  dbClient.query('ALTER TABLE jobs ADD COLUMN IF NOT EXISTS salary TEXT;')
-    .then(()=>console.log('✓ Ensured jobs.salary column'))
+  dbClient.query('ALTER TABLE jobs ADD COLUMN IF NOT EXISTS salary_range VARCHAR(100);')
+    .then(()=>console.log('✓ Ensured jobs.salary_range column'))
     .catch(()=>{})
-  dbClient.query('ALTER TABLE jobs ADD COLUMN IF NOT EXISTS type TEXT;')
-    .then(()=>console.log('✓ Ensured jobs.type column'))
+  dbClient.query('ALTER TABLE jobs ADD COLUMN IF NOT EXISTS job_type VARCHAR(50);')
+    .then(()=>console.log('✓ Ensured jobs.job_type column'))
     .catch(()=>{})
   dbClient.query('ALTER TABLE jobs ADD COLUMN IF NOT EXISTS description TEXT;')
     .then(()=>console.log('✓ Ensured jobs.description column'))
@@ -70,14 +70,14 @@ dbClient.connect().then(() => {
   dbClient.query('ALTER TABLE jobs ADD COLUMN IF NOT EXISTS requirements TEXT;')
     .then(()=>console.log('✓ Ensured jobs.requirements column'))
     .catch(()=>{})
-  dbClient.query('ALTER TABLE jobs ADD COLUMN IF NOT EXISTS deadline DATE;')
-    .then(()=>console.log('✓ Ensured jobs.deadline column'))
+  dbClient.query('ALTER TABLE jobs ADD COLUMN IF NOT EXISTS application_deadline TIMESTAMP WITH TIME ZONE;')
+    .then(()=>console.log('✓ Ensured jobs.application_deadline column'))
     .catch(()=>{})
-  dbClient.query("ALTER TABLE jobs ADD COLUMN IF NOT EXISTS posted TIMESTAMP DEFAULT NOW();")
-    .then(()=>console.log('✓ Ensured jobs.posted column'))
+  dbClient.query("ALTER TABLE jobs ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;")
+    .then(()=>console.log('✓ Ensured jobs.created_at column'))
     .catch(()=>{})
-  dbClient.query("ALTER TABLE jobs ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Active';")
-    .then(()=>console.log('✓ Ensured jobs.status column'))
+  dbClient.query("ALTER TABLE jobs ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;")
+    .then(()=>console.log('✓ Ensured jobs.is_active column'))
     .catch(()=>{})
   dbClient.query('ALTER TABLE jobs ADD COLUMN IF NOT EXISTS created_by INTEGER;')
     .then(()=>console.log('✓ Ensured jobs.created_by column'))
@@ -1354,7 +1354,8 @@ app.post('/api/v1/users/register', async (req, res) => {
 })
 
 // TPO job APIs
-app.get('/api/v1/tpo/jobs', async (req, res) => {
+app.get('/api/v1/tpo/jobs', ClerkExpressWithAuth(), async (req, res) => {
+  if (!req.auth?.userId) return res.status(401).json({ error: 'Unauthorized' });
   try {
     const result = await dbClient.query(`
       SELECT j.id, j.title, j.company, j.location, j.created_at as posted, 
@@ -1370,15 +1371,23 @@ app.get('/api/v1/tpo/jobs', async (req, res) => {
   }
 })
 
-app.post('/api/v1/tpo/jobs', async (req, res) => {
+app.post('/api/v1/tpo/jobs', ClerkExpressWithAuth(), async (req, res) => {
+  if (!req.auth?.userId) return res.status(401).json({ error: 'Unauthorized' });
   try {
     const { title, company, location, salary, type, description, requirements, deadline, created_by, job_url } = req.body || {}
     if (!title || !company) return res.status(400).json({ error: 'Missing title/company' })
+
+    let creatorId = created_by;
+    if (!creatorId) {
+        const userRes = await dbClient.query('SELECT id FROM users WHERE clerk_user_id = $1', [req.auth.userId]);
+        if (userRes.rows.length > 0) creatorId = userRes.rows[0].id;
+    }
+
     const result = await dbClient.query(
       `INSERT INTO jobs (title, company, location, salary_range, job_type, description, requirements, application_deadline, is_active, created_by, created_at, updated_at, job_url)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,true,$9,NOW(),NOW(),$10)
        RETURNING id, title, company, location, salary_range as salary, job_type as type, created_at as posted, application_deadline as deadline, CASE WHEN is_active THEN 'Active' ELSE 'Closed' END as status, job_url`,
-      [title, company, location || '', salary || '', type || 'Full-time', description || '', requirements || '', deadline || null, created_by || null, job_url || null]
+      [title, company, location || '', salary || '', type || 'Full-time', description || '', requirements || '', deadline || null, creatorId || null, job_url || null]
     )
     const msg = `Company: ${company}. Location: ${location || '—'}. Type: ${type || 'Full-time'}`
     await dbClient.query(
@@ -1393,7 +1402,8 @@ app.post('/api/v1/tpo/jobs', async (req, res) => {
   }
 })
 
-app.put('/api/v1/tpo/jobs/:job_id', async (req, res) => {
+app.put('/api/v1/tpo/jobs/:job_id', ClerkExpressWithAuth(), async (req, res) => {
+  if (!req.auth?.userId) return res.status(401).json({ error: 'Unauthorized' });
   try {
     const jobId = parseInt(req.params.job_id)
     const { title, company, location, salary, type, description, requirements, deadline, status, job_url } = req.body || {}
@@ -1442,7 +1452,8 @@ app.post('/api/v1/jobs/:job_id/apply', async (req, res) => {
 })
 
 // TPO view applications for a job
-app.get('/api/v1/tpo/jobs/:job_id/applications', async (req, res) => {
+app.get('/api/v1/tpo/jobs/:job_id/applications', ClerkExpressWithAuth(), async (req, res) => {
+  if (!req.auth?.userId) return res.status(401).json({ error: 'Unauthorized' });
   try {
     const jobId = parseInt(req.params.job_id)
     const result = await dbClient.query(

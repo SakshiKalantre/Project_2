@@ -28,6 +28,7 @@ const API_BASE_DEFAULT = process.env.NEXT_PUBLIC_API_URL || 'https://project-2-p
 
 export default function TPODashboard() {
   const { user } = useUser()
+  const { getToken } = useAuth()
   const [activeTab, setActiveTab] = useState('profiles')
   const [isCreatingJob, setIsCreatingJob] = useState(false)
   const [jobs, setJobs] = useState<Array<any>>([])
@@ -250,7 +251,10 @@ export default function TPODashboard() {
     const refreshApplicants = async () => {
       try {
         if (openApplicantsJobId) {
-          const res = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs/${openApplicantsJobId}/applications`)
+          const token = await getToken()
+          const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/jobs/${openApplicantsJobId}/applications`, {
+             headers: { 'Authorization': `Bearer ${token}` }
+          })
           if (res.ok) setApplicants(await res.json())
         }
       } catch {}
@@ -272,7 +276,10 @@ export default function TPODashboard() {
     const refreshJobs = async () => {
       try {
         if (activeTab === 'jobs') {
-          const tj = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/jobs`)
+          const token = await getToken()
+          const tj = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/jobs`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
           if (tj.ok) setJobs(await tj.json())
         }
       } catch {}
