@@ -97,6 +97,15 @@ dbClient.connect().then(() => {
   dbClient.query('ALTER TABLE jobs ADD COLUMN IF NOT EXISTS job_url TEXT;')
     .then(()=>console.log('✓ Ensured jobs.job_url column'))
     .catch(()=>{})
+  dbClient.query('ALTER TABLE jobs ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;')
+    .then(()=>console.log('✓ Ensured jobs.is_active column'))
+    .catch(()=>{})
+  dbClient.query("UPDATE jobs SET is_active = FALSE WHERE status = 'Closed';")
+    .then(()=>console.log('✓ Synced is_active for closed jobs'))
+    .catch(()=>{})
+  dbClient.query("UPDATE jobs SET is_active = TRUE WHERE status = 'Active';")
+    .then(()=>console.log('✓ Synced is_active for active jobs'))
+    .catch(()=>{})
   dbClient.query(`
     CREATE TABLE IF NOT EXISTS file_uploads (
       id SERIAL PRIMARY KEY,
@@ -732,10 +741,10 @@ app.put('/api/v1/users/:user_id', async (req, res) => {
 });
 
 app.get('/api/v1/jobs', async (req, res) => {
-    try {
-        const result = await dbClient.query(`SELECT id, title, company, location, salary, type, posted, deadline, status, job_url FROM jobs WHERE COALESCE(status,'Active') <> 'Closed' ORDER BY posted DESC`)
-        res.json(result.rows)
-    } catch (error) {
+  try {
+    const result = await dbClient.query(`SELECT id, title, company, location, salary, type, posted, deadline, status, job_url FROM jobs WHERE is_active = TRUE ORDER BY posted DESC`)
+    res.json(result.rows)
+  } catch (error) {
         res.status(500).json({ error: 'Failed to load jobs', details: String(error && error.message || '') })
     }
 });
@@ -1368,9 +1377,32 @@ app.put('/api/v1/tpo/jobs/:job_id', async (req, res) => {
         title = COALESCE($1,title), company = COALESCE($2,company), location = COALESCE($3,location),
         salary = COALESCE($4,salary), type = COALESCE($5,type), description = COALESCE($6,description),
         requirements = COALESCE($7,requirements), deadline = COALESCE($8,deadline), status = COALESCE($9,status),
+        is_active = CASE WHEN $9 = 'Closed' THEN FALSE WHEN $9 = 'Active' THEN TRUE ELSE is_active END,
         job_url = COALESCE($10,job_url), updated_at = NOW()
        WHERE id = $11
-       RETURNING id, title, company, location, salary, type, posted, deadline, status, job_url`,
+       RETURNING id, title, company, location, salary, type, posted, deadline, status, job_url, is_active`,
+      [title || null, company || null, location || null, salary || null, type || null, description || null, requirements || null, deadline || null, status || null, job_url || null, jobId]
+    )
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Job not found' })
+    res.json(result.rows[0])
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update job' })
+  }
+})
+
+app.put('/api/v1/jobs/:job_id', async (req, res) => {
+  try {
+    const jobId = parseInt(req.params.job_id)
+    const { title, company, location, salary, type, description, requirements, deadline, status, job_url } = req.body || {}
+    const result = await dbClient.query(
+      `UPDATE jobs SET 
+        title = COALESCE($1,title), company = COALESCE($2,company), location = COALESCE($3,location),
+        salary = COALESCE($4,salary), type = COALESCE($5,type), description = COALESCE($6,description),
+        requirements = COALESCE($7,requirements), deadline = COALESCE($8,deadline), status = COALESCE($9,status),
+        is_active = CASE WHEN $9 = 'Closed' THEN FALSE WHEN $9 = 'Active' THEN TRUE ELSE is_active END,
+        job_url = COALESCE($10,job_url), updated_at = NOW()
+       WHERE id = $11
+       RETURNING id, title, company, location, salary, type, posted, deadline, status, job_url, is_active`,
       [title || null, company || null, location || null, salary || null, type || null, description || null, requirements || null, deadline || null, status || null, job_url || null, jobId]
     )
     if (result.rows.length === 0) return res.status(404).json({ error: 'Job not found' })
