@@ -5,6 +5,7 @@ const { Client } = require('pg');
 const fs = require('fs');
 const { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+const { ClerkExpressWithAuth } = require('@clerk/clerk-sdk-node');
 const PDFDocument = require('pdfkit');
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
@@ -96,6 +97,9 @@ dbClient.connect().then(() => {
     .catch(()=>{})
   dbClient.query('ALTER TABLE jobs ADD COLUMN IF NOT EXISTS job_url TEXT;')
     .then(()=>console.log('✓ Ensured jobs.job_url column'))
+    .catch(()=>{})
+  dbClient.query('ALTER TABLE jobs ADD COLUMN IF NOT EXISTS closed_at TIMESTAMP WITH TIME ZONE;')
+    .then(()=>console.log('✓ Ensured jobs.closed_at column'))
     .catch(()=>{})
   dbClient.query(`
     CREATE TABLE IF NOT EXISTS file_uploads (
@@ -805,7 +809,8 @@ app.get('/api/v1/events', async (req, res) => {
 })
 
 // TPO: create event
-app.post('/api/v1/tpo/events', async (req, res) => {
+app.post('/api/v1/tpo/events', ClerkExpressWithAuth(), async (req, res) => {
+  if (!req.auth?.userId) return res.status(401).json({ error: 'Unauthorized' });
   try {
     const { title, description, location, date, time, status, form_url, category } = req.body || {}
     if (!title) return res.status(400).json({ error: 'Missing title' })
@@ -834,7 +839,8 @@ app.post('/api/v1/tpo/events', async (req, res) => {
 })
 
 // TPO: update event
-app.put('/api/v1/tpo/events/:event_id', async (req, res) => {
+app.put('/api/v1/tpo/events/:event_id', ClerkExpressWithAuth(), async (req, res) => {
+  if (!req.auth?.userId) return res.status(401).json({ error: 'Unauthorized' });
   try {
     const eventId = parseInt(req.params.event_id)
     const { title, description, location, date, time, status, form_url, category } = req.body || {}
@@ -947,7 +953,8 @@ app.post('/api/v1/tpo/events/:event_id/reminders', async (req, res) => {
 })
 
 // TPO: pending profiles
-app.get('/api/v1/tpo/pending-profiles', async (req, res) => {
+app.get('/api/v1/tpo/pending-profiles', ClerkExpressWithAuth(), async (req, res) => {
+  if (!req.auth?.userId) return res.status(401).json({ error: 'Unauthorized' });
   try {
     const result = await dbClient.query(
       `SELECT u.id AS user_id, u.first_name, u.last_name, u.email,
@@ -963,11 +970,13 @@ app.get('/api/v1/tpo/pending-profiles', async (req, res) => {
     )
     res.json(result.rows)
   } catch (error) {
+    console.error('Error loading pending profiles:', error);
     res.status(500).json({ error: 'Failed to load pending profiles' })
   }
 })
 
-app.delete('/api/v1/admin/users/by-email/:email', async (req, res) => {
+app.delete('/api/v1/admin/users/by-email/:email', ClerkExpressWithAuth(), async (req, res) => {
+  if (!req.auth?.userId) return res.status(401).json({ error: 'Unauthorized' });
   try {
     const email = req.params.email
     const ids = await dbClient.query('SELECT id FROM users WHERE email = $1', [email])
@@ -1001,7 +1010,8 @@ app.post('/api/v1/admin/reset', async (req, res) => {
 })
 
 // TPO: approve profile
-app.put('/api/v1/tpo/profiles/:user_id/approve', async (req, res) => {
+app.put('/api/v1/tpo/profiles/:user_id/approve', ClerkExpressWithAuth(), async (req, res) => {
+  if (!req.auth?.userId) return res.status(401).json({ error: 'Unauthorized' });
   try {
     const userId = parseInt(req.params.user_id)
     const { notes } = req.body || {}
@@ -1013,12 +1023,14 @@ app.put('/api/v1/tpo/profiles/:user_id/approve', async (req, res) => {
     await dbClient.query('UPDATE users SET is_approved = true, updated_at = NOW() WHERE id = $1', [userId])
     res.json(result.rows[0])
   } catch (error) {
+    console.error('Error approving profile:', error);
     res.status(500).json({ error: 'Failed to approve profile' })
   }
 })
 
 // TPO: pending resumes
-app.get('/api/v1/tpo/pending-resumes', async (req, res) => {
+app.get('/api/v1/tpo/pending-resumes', ClerkExpressWithAuth(), async (req, res) => {
+  if (!req.auth?.userId) return res.status(401).json({ error: 'Unauthorized' });
   try {
     const result = await dbClient.query(
       `SELECT f.id, f.user_id, f.file_name, f.file_type, f.mime_type, f.uploaded_at, COALESCE(f.is_verified,false) as is_verified,
@@ -1032,12 +1044,14 @@ app.get('/api/v1/tpo/pending-resumes', async (req, res) => {
     for (const r of rows) { if (await ensureExists(r.file_name ? r.file_path : r.file_path)) filtered.push(r) }
     res.json(filtered)
   } catch (error) {
+    console.error('Error loading pending resumes:', error);
     res.status(500).json({ error: 'Failed to load pending resumes' })
   }
 })
 
 // TPO: verified resumes
-app.get('/api/v1/tpo/verified-resumes', async (req, res) => {
+app.get('/api/v1/tpo/verified-resumes', ClerkExpressWithAuth(), async (req, res) => {
+  if (!req.auth?.userId) return res.status(401).json({ error: 'Unauthorized' });
   try {
     const result = await dbClient.query(
       `SELECT f.id, f.user_id, f.file_name, f.file_type, f.mime_type, f.uploaded_at, COALESCE(f.is_verified,false) as is_verified,
@@ -1051,12 +1065,14 @@ app.get('/api/v1/tpo/verified-resumes', async (req, res) => {
     for (const r of rows) { if (await ensureExists(r.file_path)) filtered.push(r) }
     res.json(filtered)
   } catch (error) {
+    console.error('Error loading verified resumes:', error);
     res.status(500).json({ error: 'Failed to load verified resumes' })
   }
 })
 
 // TPO: approved students list with placement status and latest resume
-app.get('/api/v1/tpo/approved-students', async (req, res) => {
+app.get('/api/v1/tpo/approved-students', ClerkExpressWithAuth(), async (req, res) => {
+  if (!req.auth?.userId) return res.status(401).json({ error: 'Unauthorized' });
   try {
     const result = await dbClient.query(
       `SELECT u.id as user_id, u.first_name, u.last_name, u.email, p.degree, p.year, COALESCE(p.placement_status, 'Not placed') as placement_status,
@@ -1069,12 +1085,14 @@ app.get('/api/v1/tpo/approved-students', async (req, res) => {
     )
     res.json(result.rows)
   } catch (error) {
+    console.error('Error loading approved students:', error);
     res.status(500).json({ error: 'Failed to load approved students' })
   }
 })
 
 // TPO: update placement status
-app.put('/api/v1/tpo/placement/:user_id', async (req, res) => {
+app.put('/api/v1/tpo/placement/:user_id', ClerkExpressWithAuth(), async (req, res) => {
+  if (!req.auth?.userId) return res.status(401).json({ error: 'Unauthorized' });
   try {
     const userId = parseInt(req.params.user_id)
     const { placement_status } = req.body || {}
@@ -1082,23 +1100,27 @@ app.put('/api/v1/tpo/placement/:user_id', async (req, res) => {
     if (result.rows.length === 0) return res.status(404).json({ error: 'Profile not found' })
     res.json(result.rows[0])
   } catch (error) {
+    console.error('Error updating placement status:', error);
     res.status(500).json({ error: 'Failed to update placement status' })
   }
 })
 
 // TPO profile (alternate_email, phone)
-app.get('/api/v1/tpo/:user_id/profile', async (req, res) => {
+app.get('/api/v1/tpo/:user_id/profile', ClerkExpressWithAuth(), async (req, res) => {
+  if (!req.auth?.userId) return res.status(401).json({ error: 'Unauthorized' });
   try {
     const userId = parseInt(req.params.user_id)
     const result = await dbClient.query('SELECT user_id, alternate_email, phone, updated_at FROM tpo_profiles WHERE user_id = $1', [userId])
     if (result.rows.length === 0) return res.json({ user_id: userId, alternate_email: null, phone: null })
     res.json(result.rows[0])
   } catch (error) {
+    console.error('Error loading TPO profile:', error);
     res.status(500).json({ error: 'Failed to load TPO profile' })
   }
 })
 
-app.post('/api/v1/tpo/:user_id/profile', async (req, res) => {
+app.post('/api/v1/tpo/:user_id/profile', ClerkExpressWithAuth(), async (req, res) => {
+  if (!req.auth?.userId) return res.status(401).json({ error: 'Unauthorized' });
   try {
     const userId = parseInt(req.params.user_id)
     const { alternate_email, phone } = req.body || {}
@@ -1110,6 +1132,7 @@ app.post('/api/v1/tpo/:user_id/profile', async (req, res) => {
     const result = await dbClient.query('SELECT user_id, alternate_email, phone, updated_at FROM tpo_profiles WHERE user_id = $1', [userId])
     res.json(result.rows[0])
   } catch (error) {
+    console.error('Error saving TPO profile:', error);
     res.status(500).json({ error: 'Failed to save TPO profile' })
   }
 })
@@ -1260,7 +1283,8 @@ app.post('/api/v1/tpo/notifications/broadcast', async (req, res) => {
 })
 
 // Rejection endpoints
-app.put('/api/v1/tpo/profiles/:user_id/reject', async (req, res) => {
+app.put('/api/v1/tpo/profiles/:user_id/reject', ClerkExpressWithAuth(), async (req, res) => {
+  if (!req.auth?.userId) return res.status(401).json({ error: 'Unauthorized' });
   try {
     const userId = parseInt(req.params.user_id)
     const { reason } = req.body || {}
@@ -1276,7 +1300,8 @@ app.put('/api/v1/tpo/profiles/:user_id/reject', async (req, res) => {
   }
 })
 
-app.put('/api/v1/files/:file_id/reject', async (req, res) => {
+app.put('/api/v1/files/:file_id/reject', ClerkExpressWithAuth(), async (req, res) => {
+  if (!req.auth?.userId) return res.status(401).json({ error: 'Unauthorized' });
   try {
     const fileId = parseInt(req.params.file_id)
     const { reason } = req.body || {}
@@ -1358,7 +1383,7 @@ app.get('/api/v1/tpo/jobs', ClerkExpressWithAuth(), async (req, res) => {
   if (!req.auth?.userId) return res.status(401).json({ error: 'Unauthorized' });
   try {
     const result = await dbClient.query(`
-      SELECT j.id, j.title, j.company, j.location, j.created_at as posted, 
+      SELECT j.id, j.title, j.company, j.location, j.created_at as posted, j.closed_at,
              CASE WHEN j.is_active THEN 'Active' ELSE 'Closed' END as status, 
              j.job_url, j.salary_range as salary, j.job_type as type, j.application_deadline as deadline,
              COALESCE((SELECT COUNT(a.id) FROM job_applications a WHERE a.job_id = j.id),0)::int AS applicants
@@ -1408,7 +1433,16 @@ app.put('/api/v1/tpo/jobs/:job_id', ClerkExpressWithAuth(), async (req, res) => 
     const jobId = parseInt(req.params.job_id)
     const { title, company, location, salary, type, description, requirements, deadline, status, job_url } = req.body || {}
     let isActive = null
-    if (status) isActive = (status === 'Active')
+    let closedAtUpdate = ''
+    
+    if (status) {
+        isActive = (status === 'Active')
+        if (!isActive) {
+             closedAtUpdate = ', closed_at = COALESCE(closed_at, NOW())'
+        } else {
+             closedAtUpdate = ', closed_at = NULL'
+        }
+    }
 
     const result = await dbClient.query(
       `UPDATE jobs SET 
@@ -1416,9 +1450,9 @@ app.put('/api/v1/tpo/jobs/:job_id', ClerkExpressWithAuth(), async (req, res) => 
         salary_range = COALESCE($4,salary_range), job_type = COALESCE($5,job_type), description = COALESCE($6,description),
         requirements = COALESCE($7,requirements), application_deadline = COALESCE($8,application_deadline), 
         is_active = COALESCE($9,is_active),
-        job_url = COALESCE($10,job_url), updated_at = NOW()
+        job_url = COALESCE($10,job_url), updated_at = NOW() ${closedAtUpdate}
        WHERE id = $11
-       RETURNING id, title, company, location, salary_range as salary, job_type as type, created_at as posted, application_deadline as deadline, CASE WHEN is_active THEN 'Active' ELSE 'Closed' END as status, job_url`,
+       RETURNING id, title, company, location, salary_range as salary, job_type as type, created_at as posted, closed_at, application_deadline as deadline, CASE WHEN is_active THEN 'Active' ELSE 'Closed' END as status, job_url`,
       [title || null, company || null, location || null, salary || null, type || null, description || null, requirements || null, deadline || null, isActive, job_url || null, jobId]
     )
     if (result.rows.length === 0) return res.status(404).json({ error: 'Job not found' })
@@ -1488,8 +1522,24 @@ app.get('/health', (req, res) => {
     res.json({ status: 'healthy' });
 });
 
+const ensureSchema = async () => {
+  try {
+    // Jobs table updates
+    await dbClient.query(`ALTER TABLE jobs ADD COLUMN IF NOT EXISTS closed_at TIMESTAMP WITH TIME ZONE`)
+    await dbClient.query(`ALTER TABLE jobs ADD COLUMN IF NOT EXISTS job_url VARCHAR(255)`)
+    
+    // Profiles table updates (ensure all columns exist)
+    await dbClient.query(`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS placement_status VARCHAR(50)`)
+    
+    console.log('✓ Database schema verified')
+  } catch (error) {
+    console.error('Schema update failed:', error.message)
+  }
+}
+
 // Health check
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
+    await ensureSchema()
     console.log(`PrepSphere API server running on port ${PORT}`);
     console.log(`Access the API at: http://localhost:${PORT}`);
     console.log(`Frontend is at: http://localhost:3000`);
