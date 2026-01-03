@@ -971,7 +971,8 @@ export default function TPODashboard() {
                                   const res = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs/${job.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ status: 'Closed' }) })
                                   if (res.ok) {
                                     await res.json()
-                                    setJobs(prev => prev.map(j => j.id === job.id ? { ...j, is_active: false } : j))
+                                    // FORCE local update: set is_active=false AND status='Closed' to immediately move it to closed section
+                                    setJobs(prev => prev.map(j => j.id === job.id ? { ...j, is_active: false, status: 'Closed' } : j))
                                   }
                                 } catch {}
                               }}>

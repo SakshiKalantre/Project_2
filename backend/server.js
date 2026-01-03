@@ -1373,24 +1373,37 @@ app.put('/api/v1/tpo/jobs/:job_id', async (req, res) => {
   try {
     const jobId = parseInt(req.params.job_id)
     const { title, company, location, salary, type, description, requirements, deadline, status, job_url } = req.body || {}
+
+    // 1. Fetch current status first to enforce logic in JS
+    const currentJobRes = await dbClient.query('SELECT status, is_active FROM jobs WHERE id = $1', [jobId])
+    if (currentJobRes.rows.length === 0) return res.status(404).json({ error: 'Job not found' })
+    
+    const currentJob = currentJobRes.rows[0]
+    let newStatus = status || currentJob.status
+    let newIsActive = (status !== undefined) ? (status === 'Active') : currentJob.is_active
+
+    // FORCE: If currently closed, it MUST stay closed.
+    if (currentJob.status === 'Closed') {
+      newStatus = 'Closed'
+      newIsActive = false
+    }
+    // FORCE: If input is 'Closed', it MUST become inactive.
+    if (newStatus === 'Closed') {
+      newIsActive = false
+    }
+
     const result = await dbClient.query(
       `UPDATE jobs SET 
         title = COALESCE($1,title), company = COALESCE($2,company), location = COALESCE($3,location),
         salary = COALESCE($4,salary), type = COALESCE($5,type), description = COALESCE($6,description),
         requirements = COALESCE($7,requirements), deadline = COALESCE($8,deadline), 
-        status = CASE WHEN status = 'Closed' THEN 'Closed' ELSE COALESCE($9,status) END,
-        is_active = CASE 
-          WHEN status = 'Closed' THEN FALSE 
-          WHEN $9 = 'Closed' THEN FALSE 
-          WHEN $9 = 'Active' THEN TRUE 
-          ELSE is_active 
-        END,
-        job_url = COALESCE($10,job_url), updated_at = NOW()
-       WHERE id = $11
+        status = $9,
+        is_active = $10,
+        job_url = COALESCE($11,job_url), updated_at = NOW()
+       WHERE id = $12
        RETURNING id, title, company, location, salary, type, posted, deadline, status, job_url, is_active`,
-      [title || null, company || null, location || null, salary || null, type || null, description || null, requirements || null, deadline || null, status || null, job_url || null, jobId]
+      [title || null, company || null, location || null, salary || null, type || null, description || null, requirements || null, deadline || null, newStatus, newIsActive, job_url || null, jobId]
     )
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Job not found' })
     res.json(result.rows[0])
   } catch (error) {
     res.status(500).json({ error: 'Failed to update job' })
@@ -1401,24 +1414,37 @@ app.put('/api/v1/jobs/:job_id', async (req, res) => {
   try {
     const jobId = parseInt(req.params.job_id)
     const { title, company, location, salary, type, description, requirements, deadline, status, job_url } = req.body || {}
+
+    // 1. Fetch current status first to enforce logic in JS
+    const currentJobRes = await dbClient.query('SELECT status, is_active FROM jobs WHERE id = $1', [jobId])
+    if (currentJobRes.rows.length === 0) return res.status(404).json({ error: 'Job not found' })
+    
+    const currentJob = currentJobRes.rows[0]
+    let newStatus = status || currentJob.status
+    let newIsActive = (status !== undefined) ? (status === 'Active') : currentJob.is_active
+
+    // FORCE: If currently closed, it MUST stay closed.
+    if (currentJob.status === 'Closed') {
+      newStatus = 'Closed'
+      newIsActive = false
+    }
+    // FORCE: If input is 'Closed', it MUST become inactive.
+    if (newStatus === 'Closed') {
+      newIsActive = false
+    }
+
     const result = await dbClient.query(
       `UPDATE jobs SET 
         title = COALESCE($1,title), company = COALESCE($2,company), location = COALESCE($3,location),
         salary = COALESCE($4,salary), type = COALESCE($5,type), description = COALESCE($6,description),
         requirements = COALESCE($7,requirements), deadline = COALESCE($8,deadline), 
-        status = CASE WHEN status = 'Closed' THEN 'Closed' ELSE COALESCE($9,status) END,
-        is_active = CASE 
-          WHEN status = 'Closed' THEN FALSE 
-          WHEN $9 = 'Closed' THEN FALSE 
-          WHEN $9 = 'Active' THEN TRUE 
-          ELSE is_active 
-        END,
-        job_url = COALESCE($10,job_url), updated_at = NOW()
-       WHERE id = $11
+        status = $9,
+        is_active = $10,
+        job_url = COALESCE($11,job_url), updated_at = NOW()
+       WHERE id = $12
        RETURNING id, title, company, location, salary, type, posted, deadline, status, job_url, is_active`,
-      [title || null, company || null, location || null, salary || null, type || null, description || null, requirements || null, deadline || null, status || null, job_url || null, jobId]
+      [title || null, company || null, location || null, salary || null, type || null, description || null, requirements || null, deadline || null, newStatus, newIsActive, job_url || null, jobId]
     )
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Job not found' })
     res.json(result.rows[0])
   } catch (error) {
     res.status(500).json({ error: 'Failed to update job' })
