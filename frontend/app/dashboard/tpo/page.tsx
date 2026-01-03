@@ -881,8 +881,8 @@ export default function TPODashboard() {
                   <div>
                     <h3 className="text-xl font-bold text-maroon mb-4">Active Jobs</h3>
                     <div className="grid grid-cols-1 gap-6">
-                      {jobs.filter(j => j.is_active).length === 0 && <p className="text-gray-500">No active jobs</p>}
-                      {jobs.filter(j => j.is_active).map((job) => (
+                      {jobs.filter(j => j.is_active && j.status !== 'Closed').length === 0 && <p className="text-gray-500">No active jobs</p>}
+                      {jobs.filter(j => j.is_active && j.status !== 'Closed').map((job) => (
                         <Card key={job.id} className="border-none shadow-md">
                           <CardContent className="p-6">
                             <div className="flex justify-between">
@@ -1004,8 +1004,8 @@ export default function TPODashboard() {
                   <div>
                     <h3 className="text-xl font-bold text-gray-600 mb-4">Closed Jobs</h3>
                     <div className="grid grid-cols-1 gap-6">
-                      {jobs.filter(j => !j.is_active).length === 0 && <p className="text-gray-500">No closed jobs</p>}
-                      {jobs.filter(j => !j.is_active).map((job) => (
+                      {jobs.filter(j => !j.is_active || j.status === 'Closed').length === 0 && <p className="text-gray-500">No closed jobs</p>}
+                      {jobs.filter(j => !j.is_active || j.status === 'Closed').map((job) => (
                         <Card key={job.id} className="border-none shadow-md bg-gray-50 opacity-75">
                           <CardContent className="p-6">
                             <div className="flex justify-between">
