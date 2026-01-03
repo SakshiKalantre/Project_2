@@ -71,7 +71,7 @@
 - `salary_range` (String, Optional) - Salary range
 - `job_type` (String, Optional) - Full-time, Internship, etc.
 - `application_deadline` (DateTime, Optional)
-- `is_active` (Boolean) - Job active status
+- `is_active` (Boolean) - Job active status (True: Active, False: Closed - One-way transition)
 - `created_by` (Integer, FK) - TPO user ID
 - `total_positions` (Integer) - Number of positions
 - `created_at` (DateTime)

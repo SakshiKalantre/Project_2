@@ -57,7 +57,7 @@ prepsphere/
 ### TPO Dashboard
 - Student profile approval
 - Resume review system
-- Job posting management
+- Job posting management (Active/Closed workflow)
 - Event creation
 - Applicant tracking
 - Email notifications

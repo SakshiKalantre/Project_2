@@ -871,162 +871,201 @@ export default function TPODashboard() {
                   </Card>
                 ) : null}
                 
-                <div className="grid grid-cols-1 gap-6">
-                  {jobs.map((job) => (
-                    <Card key={job.id} className={`border-none shadow-md transition-opacity ${job.status === 'Closed' ? 'opacity-75 bg-gray-50' : ''}`}>
-                      <CardContent className="p-6">
-                        <div className="flex justify-between items-start">
-                          <div className="w-full max-w-md">
-                            {editingJobId === job.id ? (
-                              <div className="space-y-4 border p-4 rounded-lg bg-white border-maroon/20">
-                                <h4 className="font-semibold text-maroon mb-2 flex items-center">
-                                  <Edit className="w-4 h-4 mr-2" />
-                                  Editing Job Details
-                                </h4>
-                                <div>
-                                  <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Job Title</Label>
-                                  <Input 
-                                    className="mt-1 border-maroon/20 focus:border-maroon"
-                                    placeholder="Job Title" 
-                                    value={editJobForm.title} 
-                                    onChange={(e)=>setEditJobForm({...editJobForm, title:e.target.value})} 
-                                  />
-                                </div>
-                                <div>
-                                  <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Company Name</Label>
-                                  <Input 
-                                    className="mt-1 border-maroon/20 focus:border-maroon"
-                                    placeholder="Company" 
-                                    value={editJobForm.company} 
-                                    onChange={(e)=>setEditJobForm({...editJobForm, company:e.target.value})} 
-                                  />
-                                </div>
-                                <div>
-                                  <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Location</Label>
-                                  <Input 
-                                    className="mt-1 border-maroon/20 focus:border-maroon"
-                                    placeholder="Location" 
-                                    value={editJobForm.location} 
-                                    onChange={(e)=>setEditJobForm({...editJobForm, location:e.target.value})} 
-                                  />
-                                </div>
+                <div className="space-y-8">
+                  {/* 
+                    ACTIVE JOBS SECTION:
+                    - Shows currently active jobs (is_active=true)
+                    - TPO can Edit or Close these jobs.
+                    - "Close" action is one-way (Active -> Closed).
+                  */}
+                  <div>
+                    <h3 className="text-xl font-bold text-maroon mb-4">Active Jobs</h3>
+                    <div className="grid grid-cols-1 gap-6">
+                      {jobs.filter(j => j.is_active).length === 0 && <p className="text-gray-500">No active jobs</p>}
+                      {jobs.filter(j => j.is_active).map((job) => (
+                        <Card key={job.id} className="border-none shadow-md">
+                          <CardContent className="p-6">
+                            <div className="flex justify-between">
+                              <div>
+                                {editingJobId === job.id ? (
+                                  <div className="space-y-2">
+                                    <Input placeholder="Job Title" value={editJobForm.title} onChange={(e)=>setEditJobForm({...editJobForm, title:e.target.value})} />
+                                    <Input placeholder="Company" value={editJobForm.company} onChange={(e)=>setEditJobForm({...editJobForm, company:e.target.value})} />
+                                    <Input placeholder="Location" value={editJobForm.location} onChange={(e)=>setEditJobForm({...editJobForm, location:e.target.value})} />
+                                  </div>
+                                ) : (
+                                  <>
+                                    <h3 className="text-xl font-semibold">{job.title}</h3>
+                                    <p className="text-gray-600">{job.company} • {job.location}</p>
+                                  </>
+                                )}
                               </div>
-                            ) : (
-                              <>
-                                <h3 className="text-xl font-semibold text-gray-900">{job.title}</h3>
-                                <p className="text-gray-600 mt-1">{job.company} • {job.location}</p>
-                              </>
-                            )}
-                          </div>
-                          <Badge variant="secondary" className={`${editingJobId === job.id ? (editJobForm.status === 'Active' ? "bg-green-100 text-green-800 border-green-200" : "bg-gray-100 text-gray-800 border-gray-200") : (job.status === 'Active' ? "bg-green-100 text-green-800 border-green-200" : "bg-red-100 text-red-800 border-red-200")} px-3 py-1`}>
-                            {editingJobId === job.id ? editJobForm.status : job.status}
-                          </Badge>
-                        </div>
-                        
-                        <div className="mt-6 flex flex-wrap gap-6">
-                          <div className="flex items-center p-3 bg-blue-50 rounded-lg border border-blue-100">
-                            <Users className="mr-2 h-5 w-5 text-blue-600" />
-                            <div>
-                              <span className="text-xs text-blue-600 font-semibold uppercase">Total Applicants</span>
-                              <p className="text-lg font-bold text-blue-900">{openApplicantsJobId === job.id ? applicants.length : (job.applicants ?? 0)}</p>
+                              <Badge variant="secondary" className="bg-gold text-maroon">
+                                Active
+                              </Badge>
                             </div>
-                          </div>
-                          <div className="flex items-center p-3 bg-gray-50 rounded-lg border border-gray-100">
-                            <Calendar className="mr-2 h-5 w-5 text-gray-500" />
-                            <div>
-                              <span className="text-xs text-gray-500 font-semibold uppercase">Posted Date</span>
-                              <p className="text-sm font-medium text-gray-900">{job.posted ? new Date(job.posted).toLocaleDateString() : 'N/A'}</p>
+                            
+                            <div className="mt-4 flex flex-wrap gap-4">
+                              <div className="flex items-center text-gray-600">
+                                <Users className="mr-2 h-4 w-4" />
+                                <span>{openApplicantsJobId === job.id ? applicants.length : (job.applicants ?? 0)} Applicants</span>
+                              </div>
+                              <div className="flex items-center text-gray-600">
+                                <Calendar className="mr-2 h-4 w-4" />
+                                <span>Posted {job.posted || (job.created_at ? new Date(job.created_at).toLocaleDateString() : 'N/A')}</span>
+                              </div>
                             </div>
-                          </div>
-                        </div>
-                        
-                        <div className="mt-6 flex space-x-3 pt-4 border-t">
-                          <Button variant="outline" onClick={async()=>{
-                            try {
-                              if (openApplicantsJobId === job.id) { setOpenApplicantsJobId(null); setApplicants([]); return }
-                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs/${job.id}/applications`)
-                              if (res.ok) {
-                                const rows = await res.json()
-                                setApplicants(rows)
-                                setOpenApplicantsJobId(job.id)
-                              }
-                            } catch {}
-                          }}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            View Applicants
-                          </Button>
-                          {openApplicantsJobId === job.id && (
-                            <Button variant="outline" onClick={async()=>{
-                              try {
-                                const res = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs/${job.id}/applications`)
-                                if (res.ok) setApplicants(await res.json())
-                              } catch {}
-                            }}>Refresh</Button>
-                          )}
-                          {editingJobId === job.id ? (
-                            <>
+                            
+                            <div className="mt-6 flex space-x-3">
                               <Button variant="outline" onClick={async()=>{
                                 try {
-                                  const payload:any = { title: editJobForm.title || null, company: editJobForm.company || null, location: editJobForm.location || null, status: editJobForm.status || null }
-                                  const res = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs/${job.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
+                                  if (openApplicantsJobId === job.id) { setOpenApplicantsJobId(null); setApplicants([]); return }
+                                  const res = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs/${job.id}/applications`)
                                   if (res.ok) {
-                                    const updated = await res.json()
-                                    setJobs(prev => prev.map(j => j.id === job.id ? { ...j, ...updated } : j))
-                                    setEditingJobId(null)
+                                    const rows = await res.json()
+                                    setApplicants(rows)
+                                    setOpenApplicantsJobId(job.id)
                                   }
                                 } catch {}
                               }}>
-                                <Check className="mr-2 h-4 w-4" />
-                                Save
+                                <Eye className="mr-2 h-4 w-4" />
+                                View Applicants
                               </Button>
-                              <Button variant="outline" onClick={()=>{ setEditingJobId(null) }}>
+                              {openApplicantsJobId === job.id && (
+                                <Button variant="outline" onClick={async()=>{
+                                  try {
+                                    const res = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs/${job.id}/applications`)
+                                    if (res.ok) setApplicants(await res.json())
+                                  } catch {}
+                                }}>Refresh</Button>
+                              )}
+                              {editingJobId === job.id ? (
+                                <>
+                                  <Button variant="outline" onClick={async()=>{
+                                    try {
+                                      const payload:any = { title: editJobForm.title || null, company: editJobForm.company || null, location: editJobForm.location || null }
+                                      const res = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs/${job.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
+                                      if (res.ok) {
+                                        const updated = await res.json()
+                                        setJobs(prev => prev.map(j => j.id === job.id ? { ...j, ...updated } : j))
+                                        setEditingJobId(null)
+                                      }
+                                    } catch {}
+                                  }}>
+                                    <Check className="mr-2 h-4 w-4" />
+                                    Save
+                                  </Button>
+                                  <Button variant="outline" onClick={()=>{ setEditingJobId(null) }}>
+                                    <X className="mr-2 h-4 w-4" />
+                                    Cancel
+                                  </Button>
+                                </>
+                              ) : (
+                                <Button variant="outline" onClick={()=>{ setEditingJobId(job.id); setEditJobForm({ title: job.title || '', company: job.company || '', location: job.location || '', status: 'Active' }) }}>
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  Edit
+                                </Button>
+                              )}
+                              <Button variant="destructive" className="bg-red-600 hover:bg-red-700 text-white" onClick={async()=>{
+                                try {
+                                  const res = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs/${job.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ status: 'Closed' }) })
+                                  if (res.ok) {
+                                    await res.json()
+                                    setJobs(prev => prev.map(j => j.id === job.id ? { ...j, is_active: false } : j))
+                                  }
+                                } catch {}
+                              }}>
                                 <X className="mr-2 h-4 w-4" />
-                                Cancel
+                                Close
                               </Button>
-                            </>
-                          ) : (
-                            <Button variant="outline" onClick={()=>{ setEditingJobId(job.id); setEditJobForm({ title: job.title || '', company: job.company || '', location: job.location || '', status: job.status || 'Active' }) }}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit
-                            </Button>
-                          )}
-                          <Button 
-                            variant={job.status === 'Active' ? "destructive" : "outline"} 
-                            className={job.status === 'Active' ? "bg-red-600 hover:bg-red-700 text-white" : "border-green-600 text-green-600 hover:bg-green-50"} 
-                            onClick={async()=>{
-                            try {
-                              const newStatus = job.status === 'Active' ? 'Closed' : 'Active'
-                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs/${job.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ status: newStatus }) })
-                              if (res.ok) {
-                                await res.json()
-                                // Update local state instead of removing
-                                setJobs(prev => prev.map(j => j.id === job.id ? { ...j, status: newStatus } : j))
-                              }
-                            } catch {}
-                          }}>
-                            {job.status === 'Active' ? <X className="mr-2 h-4 w-4" /> : <Check className="mr-2 h-4 w-4" />}
-                            {job.status === 'Active' ? 'Close Job' : 'Reopen Job'}
-                          </Button>
-                        </div>
-                        {openApplicantsJobId === job.id && (
-                          <div className="mt-4 border-t pt-4">
-                            {applicants.length === 0 ? (
-                              <p className="text-sm text-gray-600">No applications yet</p>
-                            ) : (
-                              <div className="space-y-2">
-                                {applicants.map((a)=> (
-                                  <div key={a.id} className="flex justify-between text-sm">
-                                    <span>{a.first_name} {a.last_name} • {a.email}</span>
-                                    <span className="text-gray-600">{new Date(a.applied_at).toLocaleString()}</span>
+                            </div>
+                            {openApplicantsJobId === job.id && (
+                              <div className="mt-4 border-t pt-4">
+                                {applicants.length === 0 ? (
+                                  <p className="text-sm text-gray-600">No applications yet</p>
+                                ) : (
+                                  <div className="space-y-2">
+                                    {applicants.map((a)=> (
+                                      <div key={a.id} className="flex justify-between text-sm">
+                                        <span>{a.first_name} {a.last_name} • {a.email}</span>
+                                        <span className="text-gray-600">{new Date(a.applied_at).toLocaleString()}</span>
+                                      </div>
+                                    ))}
                                   </div>
-                                ))}
+                                )}
                               </div>
                             )}
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))}
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-600 mb-4">Closed Jobs</h3>
+                    <div className="grid grid-cols-1 gap-6">
+                      {jobs.filter(j => !j.is_active).length === 0 && <p className="text-gray-500">No closed jobs</p>}
+                      {jobs.filter(j => !j.is_active).map((job) => (
+                        <Card key={job.id} className="border-none shadow-md bg-gray-50 opacity-75">
+                          <CardContent className="p-6">
+                            <div className="flex justify-between">
+                              <div>
+                                <h3 className="text-xl font-semibold">{job.title}</h3>
+                                <p className="text-gray-600">{job.company} • {job.location}</p>
+                              </div>
+                              <Badge variant="secondary" className="bg-gray-200 text-gray-700">
+                                Closed
+                              </Badge>
+                            </div>
+                            
+                            <div className="mt-4 flex flex-wrap gap-4">
+                              <div className="flex items-center text-gray-600">
+                                <Users className="mr-2 h-4 w-4" />
+                                <span>{openApplicantsJobId === job.id ? applicants.length : (job.applicants ?? 0)} Applicants</span>
+                              </div>
+                              <div className="flex items-center text-gray-600">
+                                <Calendar className="mr-2 h-4 w-4" />
+                                <span>Posted {job.posted || (job.created_at ? new Date(job.created_at).toLocaleDateString() : 'N/A')}</span>
+                              </div>
+                            </div>
+                            
+                            <div className="mt-6 flex space-x-3">
+                              <Button variant="outline" onClick={async()=>{
+                                try {
+                                  if (openApplicantsJobId === job.id) { setOpenApplicantsJobId(null); setApplicants([]); return }
+                                  const res = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs/${job.id}/applications`)
+                                  if (res.ok) {
+                                    const rows = await res.json()
+                                    setApplicants(rows)
+                                    setOpenApplicantsJobId(job.id)
+                                  }
+                                } catch {}
+                              }}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                View Applicants
+                              </Button>
+                            </div>
+                            {openApplicantsJobId === job.id && (
+                              <div className="mt-4 border-t pt-4">
+                                {applicants.length === 0 ? (
+                                  <p className="text-sm text-gray-600">No applications yet</p>
+                                ) : (
+                                  <div className="space-y-2">
+                                    {applicants.map((a)=> (
+                                      <div key={a.id} className="flex justify-between text-sm">
+                                        <span>{a.first_name} {a.last_name} • {a.email}</span>
+                                        <span className="text-gray-600">{new Date(a.applied_at).toLocaleString()}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
