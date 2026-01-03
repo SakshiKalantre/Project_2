@@ -132,14 +132,14 @@ export default function HomePage() {
           
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
             {[
-              { name: 'TCS', logo: 'https://commons.wikimedia.org/wiki/Special:FilePath/Tata_Consultancy_Services_old_logo.svg' },
-              { name: 'Infosys', logo: 'https://commons.wikimedia.org/wiki/Special:FilePath/Infosys_logo.svg' },
-              { name: 'Wipro', logo: 'https://commons.wikimedia.org/wiki/Special:FilePath/Wipro_Primary_Logo_Color_RGB.svg' },
-              { name: 'Cognizant', logo: 'https://commons.wikimedia.org/wiki/Special:FilePath/Cognizant_logo_2022.svg' },
-              { name: 'Accenture', logo: 'https://commons.wikimedia.org/wiki/Special:FilePath/Accenture_logo.svg' },
-              { name: 'Deloitte', logo: 'https://commons.wikimedia.org/wiki/Special:FilePath/Logo_of_Deloitte.svg' },
-              { name: 'HDFC Bank', logo: 'https://commons.wikimedia.org/wiki/Special:FilePath/HDFC_Bank_Logo.svg' },
-              { name: 'ICICI Bank', logo: 'https://commons.wikimedia.org/wiki/Special:FilePath/ICICI_Bank_Logo.svg' }
+              { name: 'TCS', logo: 'https://logo.clearbit.com/tcs.com' },
+              { name: 'Infosys', logo: 'https://logo.clearbit.com/infosys.com' },
+              { name: 'Wipro', logo: 'https://logo.clearbit.com/wipro.com' },
+              { name: 'Cognizant', logo: 'https://logo.clearbit.com/cognizant.com' },
+              { name: 'Accenture', logo: 'https://logo.clearbit.com/accenture.com' },
+              { name: 'Deloitte', logo: 'https://logo.clearbit.com/deloitte.com' },
+              { name: 'HDFC Bank', logo: 'https://logo.clearbit.com/hdfcbank.com' },
+              { name: 'ICICI Bank', logo: 'https://logo.clearbit.com/icicibank.com' }
             ].map((company, index) => (
               <Card key={index} className="border-none shadow-md hover:shadow-lg transition-shadow bg-white">
                 <CardContent className="p-6 flex items-center justify-center h-32">
@@ -147,9 +147,10 @@ export default function HomePage() {
                     src={company.logo} 
                     alt={company.name}
                     className="max-w-full max-h-16 object-contain"
-                    loading="lazy"
-                    referrerPolicy="no-referrer"
-                    crossOrigin="anonymous"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(company.name)}&background=7A1F2A&color=fff&size=128`;
+                    }}
                   />
                 </CardContent>
               </Card>

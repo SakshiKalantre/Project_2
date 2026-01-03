@@ -35,13 +35,6 @@ const PORT = process.env.PORT || 8001;
 const connectionString = process.env.DATABASE_URL || 'postgresql://user:Swapnil%402102@localhost:5432/Project_2';
 const dbClient = new Client({ connectionString });
 
-let jobsCache = []
-let jobsSeq = 100000
-function cacheJob(row) {
-  if (!row) return
-  jobsCache = [row, ...jobsCache].slice(0, 500)
-}
-
 dbClient.connect().then(() => {
   console.log('✓ Connected to PostgreSQL database');
   dbClient.query('ALTER TABLE profiles ADD COLUMN IF NOT EXISTS alternate_email VARCHAR(255);')
@@ -265,10 +258,31 @@ dbClient.connect().then(() => {
 });
 
 // Middleware
-app.use(cors());
+const corsOptions = {
+  origin: [
+    'https://project-2-sbst.vercel.app',
+    /^https:\/\/.*\.vercel\.app$/,
+    'http://localhost:3000',
+    'http://localhost:5173'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-reset-key']
+};
+app.use(cors(corsOptions));
 app.use(express.json());
 // increase payload size for base64 uploads
 app.use(express.json({ limit: '25mb' }));
+
+// Auth placeholder middleware for TPO routes
+app.use('/api/v1/tpo', (req, res, next) => {
+  // TODO: Implement proper Clerk verification using @clerk/clerk-sdk-node
+  // Currently allowing access but logging warning for debugging
+  if (!req.headers.authorization) {
+    console.warn(`[Security] Missing Authorization header for ${req.method} ${req.path}`);
+  }
+  next();
+});
 
 // Utility helpers
 const genLocalClerkId = () => `local_${Date.now()}_${Math.floor(Math.random()*1e6)}`;
@@ -740,10 +754,22 @@ app.put('/api/v1/users/:user_id', async (req, res) => {
 
 app.get('/api/v1/jobs', async (req, res) => {
     try {
-        const result = await dbClient.query(`SELECT id, title, company, location, salary, type, posted, deadline, status, job_url FROM jobs WHERE COALESCE(status,'Active') <> 'Closed' ORDER BY posted DESC`)
+        const result = await dbClient.query(`
+            SELECT id, title, company, location, 
+                   salary_range as salary, 
+                   job_type as type, 
+                   created_at as posted, 
+                   application_deadline as deadline, 
+                   CASE WHEN is_active THEN 'Active' ELSE 'Closed' END as status, 
+                   job_url 
+            FROM jobs 
+            WHERE is_active = true 
+            ORDER BY created_at DESC
+        `)
         res.json(result.rows)
     } catch (error) {
-        res.json(jobsCache)
+        console.error('Error loading jobs:', error);
+        res.status(500).json({ error: 'Failed to load jobs', details: String(error && error.message || '') })
     }
 });
 
@@ -1331,13 +1357,16 @@ app.post('/api/v1/users/register', async (req, res) => {
 app.get('/api/v1/tpo/jobs', async (req, res) => {
   try {
     const result = await dbClient.query(`
-      SELECT j.id, j.title, j.company, j.location, j.posted, j.status, j.job_url,
+      SELECT j.id, j.title, j.company, j.location, j.created_at as posted, 
+             CASE WHEN j.is_active THEN 'Active' ELSE 'Closed' END as status, 
+             j.job_url, j.salary_range as salary, j.job_type as type, j.application_deadline as deadline,
              COALESCE((SELECT COUNT(a.id) FROM job_applications a WHERE a.job_id = j.id),0)::int AS applicants
       FROM jobs j
-      ORDER BY j.posted DESC`)
+      ORDER BY j.created_at DESC`)
     res.json(result.rows)
   } catch (error) {
-    res.json(jobsCache)
+    console.error('Error loading TPO jobs:', error);
+    res.status(500).json({ error: 'Failed to load TPO jobs' })
   }
 })
 
@@ -1346,9 +1375,9 @@ app.post('/api/v1/tpo/jobs', async (req, res) => {
     const { title, company, location, salary, type, description, requirements, deadline, created_by, job_url } = req.body || {}
     if (!title || !company) return res.status(400).json({ error: 'Missing title/company' })
     const result = await dbClient.query(
-      `INSERT INTO jobs (title, company, location, salary, type, description, requirements, deadline, status, created_by, posted, updated_at, job_url)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'Active',$9,NOW(),NOW(),$10)
-       RETURNING id, title, company, location, salary, type, posted, deadline, status, job_url`,
+      `INSERT INTO jobs (title, company, location, salary_range, job_type, description, requirements, application_deadline, is_active, created_by, created_at, updated_at, job_url)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,true,$9,NOW(),NOW(),$10)
+       RETURNING id, title, company, location, salary_range as salary, job_type as type, created_at as posted, application_deadline as deadline, CASE WHEN is_active THEN 'Active' ELSE 'Closed' END as status, job_url`,
       [title, company, location || '', salary || '', type || 'Full-time', description || '', requirements || '', deadline || null, created_by || null, job_url || null]
     )
     const msg = `Company: ${company}. Location: ${location || '—'}. Type: ${type || 'Full-time'}`
@@ -1359,12 +1388,8 @@ app.post('/api/v1/tpo/jobs', async (req, res) => {
     )
     res.status(201).json(result.rows[0])
   } catch (error) {
-    const { title, company, location, salary, type, deadline, job_url } = req.body || {}
-    if (!title || !company) return res.status(500).json({ error: 'Failed to create job' })
-    const id = ++jobsSeq
-    const row = { id, title, company, location: location || null, salary: salary || null, type: type || null, posted: new Date().toISOString(), deadline: deadline || null, status: 'Active', job_url: job_url || null, applicants: 0 }
-    cacheJob(row)
-    res.status(201).json(row)
+    console.error('Error creating job:', error);
+    res.status(500).json({ error: 'Failed to create job' })
   }
 })
 
@@ -1372,19 +1397,24 @@ app.put('/api/v1/tpo/jobs/:job_id', async (req, res) => {
   try {
     const jobId = parseInt(req.params.job_id)
     const { title, company, location, salary, type, description, requirements, deadline, status, job_url } = req.body || {}
+    let isActive = null
+    if (status) isActive = (status === 'Active')
+
     const result = await dbClient.query(
       `UPDATE jobs SET 
         title = COALESCE($1,title), company = COALESCE($2,company), location = COALESCE($3,location),
-        salary = COALESCE($4,salary), type = COALESCE($5,type), description = COALESCE($6,description),
-        requirements = COALESCE($7,requirements), deadline = COALESCE($8,deadline), status = COALESCE($9,status),
+        salary_range = COALESCE($4,salary_range), job_type = COALESCE($5,job_type), description = COALESCE($6,description),
+        requirements = COALESCE($7,requirements), application_deadline = COALESCE($8,application_deadline), 
+        is_active = COALESCE($9,is_active),
         job_url = COALESCE($10,job_url), updated_at = NOW()
        WHERE id = $11
-       RETURNING id, title, company, location, salary, type, posted, deadline, status, job_url`,
-      [title || null, company || null, location || null, salary || null, type || null, description || null, requirements || null, deadline || null, status || null, job_url || null, jobId]
+       RETURNING id, title, company, location, salary_range as salary, job_type as type, created_at as posted, application_deadline as deadline, CASE WHEN is_active THEN 'Active' ELSE 'Closed' END as status, job_url`,
+      [title || null, company || null, location || null, salary || null, type || null, description || null, requirements || null, deadline || null, isActive, job_url || null, jobId]
     )
     if (result.rows.length === 0) return res.status(404).json({ error: 'Job not found' })
     res.json(result.rows[0])
   } catch (error) {
+    console.error('Error updating job:', error);
     res.status(500).json({ error: 'Failed to update job' })
   }
 })
@@ -1423,7 +1453,7 @@ app.get('/api/v1/tpo/jobs/:job_id/applications', async (req, res) => {
     )
     res.json(result.rows)
   } catch (error) {
-    res.json([])
+    res.status(500).json({ error: 'Failed to load applications' })
   }
 })
 // TPO: verify resume

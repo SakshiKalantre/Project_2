@@ -187,7 +187,7 @@ export default function StudentDashboard() {
           return
         }
 
-        const jobsResponse = await fetch(`${API_BASE}/api/v1/jobs?t=${Date.now()}`, { cache: 'no-store' })
+        const jobsResponse = await fetch(`${API_BASE}/api/v1/jobs`)
         if (jobsResponse.ok) {
           const jobsData = await jobsResponse.json()
           setJobListings(jobsData)
@@ -232,11 +232,10 @@ export default function StudentDashboard() {
   }, [activeTab, userId])
 
   useEffect(() => {
-    let poll: any
     const refreshJobs = async () => {
       try {
         if (activeTab === 'jobs') {
-          const res = await fetch(`${API_BASE}/api/v1/jobs`, { cache:'no-store' })
+          const res = await fetch(`${API_BASE}/api/v1/jobs`)
           if (res.ok) {
             const rows = await res.json()
             setJobListings(rows)
@@ -245,8 +244,6 @@ export default function StudentDashboard() {
       } catch {}
     }
     refreshJobs()
-    if (activeTab === 'jobs') poll = setInterval(refreshJobs, 15000)
-    return () => { if (poll) clearInterval(poll) }
   }, [activeTab])
 
   useEffect(() => {
@@ -760,11 +757,7 @@ export default function StudentDashboard() {
                                 const userRes = await fetch(`${API_BASE}/api/v1/users/by-email/${encodeURIComponent(current?.email)}`)
                                 if (userRes.ok) {
                                   const u = await userRes.json()
-                                  let applyRes = await fetch(`${API_BASE}/api/v1/jobs/${job.id}/apply`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ user_id: u.id }) })
-                                  if (!applyRes.ok) {
-                                    applyRes = await fetch(`${API_BASE}/api/v1/jobs/applications`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ job_id: job.id, user_id: u.id }) })
-                                  }
-                                  if (!applyRes.ok) throw new Error('Apply failed')
+                                  await fetch(`${API_BASE}/api/v1/jobs/${job.id}/apply`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ user_id: u.id }) })
                                   alert('Applied successfully')
                                   if (job.job_url) {
                                     const w = window.open(job.job_url, '_blank')

@@ -250,7 +250,7 @@ export default function TPODashboard() {
     const refreshApplicants = async () => {
       try {
         if (openApplicantsJobId) {
-          const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/jobs/${openApplicantsJobId}/applications`)
+          const res = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs/${openApplicantsJobId}/applications`)
           if (res.ok) setApplicants(await res.json())
         }
       } catch {}
@@ -272,10 +272,7 @@ export default function TPODashboard() {
     const refreshJobs = async () => {
       try {
         if (activeTab === 'jobs') {
-          let tj = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/jobs`)
-          if (!tj.ok) {
-            tj = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs?t=${Date.now()}`, { cache:'no-store' })
-          }
+          const tj = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/jobs`)
           if (tj.ok) setJobs(await tj.json())
         }
       } catch {}
@@ -363,66 +360,13 @@ export default function TPODashboard() {
 
   const postJob = async () => {
     try {
-      const titleClean = (jobForm.title||'').trim()
-      const companyClean = (jobForm.company||'').trim()
-      if (!titleClean || !companyClean) { alert('Title and Company are required'); return }
-      let creator = tpoUserId
-      if (!creator) {
-        try {
-          let email: string | null = null
-          if (user) {
-            // @ts-ignore
-            email = user.primaryEmailAddress?.emailAddress || user.emailAddresses?.[0]?.emailAddress || null
-          }
-          if (!email) {
-            const stored = typeof window !== 'undefined' ? localStorage.getItem('currentUser') : null
-            const current = stored ? JSON.parse(stored) : null
-            email = current?.email || null
-          }
-          if (email) {
-            const u = await fetch(`${API_BASE_DEFAULT}/api/v1/users/by-email/${encodeURIComponent(email)}`)
-            if (u.ok) { const uj = await u.json(); creator = uj.id; setTpoUserId(uj.id) }
-          }
-        } catch {}
-      }
-
-      const normalizeDate = (val: string) => {
-        const v = (val || '').trim()
-        if (!v) return null
-        if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v
-        const m = v.match(/^(\d{2})-(\d{2})-(\d{4})$/)
-        if (m) return `${m[3]}-${m[2]}-${m[1]}`
-        return null
-      }
-
-      const safeDeadline = normalizeDate(jobForm.deadline)
-      const nodePayload: any = { ...jobForm, title: titleClean, company: companyClean, created_by: creator, deadline: safeDeadline || null }
-      let res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/jobs`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(nodePayload) })
-      if (!res.ok) {
-        const faPayload: any = {
-          title: titleClean,
-          company: companyClean,
-          location: jobForm.location,
-          description: jobForm.description,
-          requirements: jobForm.requirements,
-          salary: jobForm.salary || null,
-          job_url: jobForm.job_url || null,
-          deadline: safeDeadline || null,
-          created_by: creator
-        }
-        res = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(faPayload) })
-      }
+      const payload = { ...jobForm, created_by: tpoUserId }
+      const res = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
       if (res.ok) {
         const row = await res.json()
         setJobs(prev=>[row, ...prev])
-        try {
-          const tj = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs`, { cache: 'no-store' })
-          if (tj.ok) setJobs(await tj.json())
-        } catch {}
         setIsCreatingJob(false)
         setJobForm({ title:'', company:'', location:'', salary:'', type:'Full-time', description:'', requirements:'', deadline:'', job_url:'' })
-      } else {
-        try { const t = await res.text(); alert(`Failed to create job: ${t}`) } catch { alert('Failed to create job') }
       }
     } catch {}
   }
@@ -958,7 +902,7 @@ export default function TPODashboard() {
                           </div>
                           <div className="flex items-center text-gray-600">
                             <Calendar className="mr-2 h-4 w-4" />
-                            <span>Posted {(job.posted ? new Date(job.posted).toLocaleString() : (job.created_at ? new Date(job.created_at).toLocaleString() : ''))}</span>
+                            <span>Posted {job.posted}</span>
                           </div>
                         </div>
                         
@@ -966,7 +910,7 @@ export default function TPODashboard() {
                           <Button variant="outline" onClick={async()=>{
                             try {
                               if (openApplicantsJobId === job.id) { setOpenApplicantsJobId(null); setApplicants([]); return }
-                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/jobs/${job.id}/applications`)
+                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs/${job.id}/applications`)
                               if (res.ok) {
                                 const rows = await res.json()
                                 setApplicants(rows)
@@ -980,7 +924,7 @@ export default function TPODashboard() {
                           {openApplicantsJobId === job.id && (
                             <Button variant="outline" onClick={async()=>{
                               try {
-                                const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/jobs/${job.id}/applications`)
+                                const res = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs/${job.id}/applications`)
                                 if (res.ok) setApplicants(await res.json())
                               } catch {}
                             }}>Refresh</Button>
@@ -990,7 +934,7 @@ export default function TPODashboard() {
                               <Button variant="outline" onClick={async()=>{
                                 try {
                                   const payload:any = { title: editJobForm.title || null, company: editJobForm.company || null, location: editJobForm.location || null, status: editJobForm.status || null }
-                                  const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/jobs/${job.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
+                                  const res = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs/${job.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
                                   if (res.ok) {
                                     const updated = await res.json()
                                     setJobs(prev => prev.map(j => j.id === job.id ? { ...j, ...updated } : j))
@@ -1012,9 +956,9 @@ export default function TPODashboard() {
                               Edit
                             </Button>
                           )}
-                            <Button variant="destructive" className="bg-red-600 hover:bg-red-700 text-white" onClick={async()=>{
+                          <Button variant="destructive" className="bg-red-600 hover:bg-red-700 text-white" onClick={async()=>{
                             try {
-                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/jobs/${job.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ status: 'Closed' }) })
+                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs/${job.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ status: 'Closed' }) })
                               if (res.ok) {
                                 await res.json()
                                 setJobs(prev => prev.filter(j => j.id !== job.id))
