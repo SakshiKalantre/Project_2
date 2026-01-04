@@ -97,15 +97,6 @@ dbClient.connect().then(() => {
   dbClient.query('ALTER TABLE jobs ADD COLUMN IF NOT EXISTS job_url TEXT;')
     .then(()=>console.log('✓ Ensured jobs.job_url column'))
     .catch(()=>{})
-  dbClient.query('ALTER TABLE jobs ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;')
-    .then(()=>console.log('✓ Ensured jobs.is_active column'))
-    .catch(()=>{})
-  dbClient.query("UPDATE jobs SET is_active = FALSE WHERE status = 'Closed';")
-    .then(()=>console.log('✓ Synced is_active for closed jobs'))
-    .catch(()=>{})
-  dbClient.query("UPDATE jobs SET is_active = TRUE WHERE status = 'Active';")
-    .then(()=>console.log('✓ Synced is_active for active jobs'))
-    .catch(()=>{})
   dbClient.query(`
     CREATE TABLE IF NOT EXISTS file_uploads (
       id SERIAL PRIMARY KEY,
@@ -741,10 +732,10 @@ app.put('/api/v1/users/:user_id', async (req, res) => {
 });
 
 app.get('/api/v1/jobs', async (req, res) => {
-  try {
-    const result = await dbClient.query(`SELECT id, title, company, location, salary, type, posted, deadline, status, job_url FROM jobs WHERE is_active = TRUE AND status != 'Closed' ORDER BY posted DESC`)
-    res.json(result.rows)
-  } catch (error) {
+    try {
+        const result = await dbClient.query(`SELECT id, title, company, location, salary, type, posted, deadline, status, job_url FROM jobs WHERE COALESCE(status,'Active') <> 'Closed' ORDER BY posted DESC`)
+        res.json(result.rows)
+    } catch (error) {
         res.status(500).json({ error: 'Failed to load jobs', details: String(error && error.message || '') })
     }
 });
@@ -1110,19 +1101,18 @@ app.get('/api/v1/tpo/stats/summary', async (req, res) => {
 })
 
 // TPO stats CSV and store in reports
-// UPDATED: Now includes job status (Active/Closed) to reflect the new one-way lifecycle.
 app.get('/api/v1/tpo/stats/summary.csv', async (req, res) => {
   try {
     const perJob = await dbClient.query(`
-      SELECT j.id, j.title, j.is_active, COALESCE(COUNT(a.id),0)::int AS applications,
+      SELECT j.id, j.title, COALESCE(COUNT(a.id),0)::int AS applications,
              COALESCE(SUM(CASE WHEN LOWER(a.status)='selected' THEN 1 ELSE 0 END),0)::int AS selected
       FROM jobs j LEFT JOIN job_applications a ON a.job_id = j.id
-      GROUP BY j.id, j.title, j.is_active
+      GROUP BY j.id, j.title
       ORDER BY applications DESC
     `)
     const rows = perJob.rows
-    const header = 'job_id,title,status,applications,selected\n'
-    const body = rows.map(r=>`${r.id},"${String(r.title).replace(/"/g,'"')}",${r.is_active?'Active':'Closed'},${r.applications},${r.selected}`).join('\n')
+    const header = 'job_id,title,applications,selected\n'
+    const body = rows.map(r=>`${r.id},"${String(r.title).replace(/"/g,'"')}",${r.applications},${r.selected}`).join('\n')
     const csv = header + body
     await dbClient.query('INSERT INTO tpo_reports (generated_by, type, data_json, generated_at) VALUES ($1,$2,$3,NOW())', [null, 'summary', JSON.stringify(rows)])
     res.setHeader('Content-Type', 'text/csv')
@@ -1134,18 +1124,16 @@ app.get('/api/v1/tpo/stats/summary.csv', async (req, res) => {
 })
 
 // TPO stats PDF
-// UPDATED: Now includes job status (Active/Closed) to reflect the new one-way lifecycle.
 app.get('/api/v1/tpo/stats/summary.pdf', async (req, res) => {
   try {
     const totalsJobs = await dbClient.query('SELECT COUNT(*)::int AS count FROM jobs')
-    const activeJobs = await dbClient.query('SELECT COUNT(*)::int AS count FROM jobs WHERE is_active = TRUE')
     const totalsApps = await dbClient.query('SELECT COUNT(*)::int AS count FROM job_applications')
     const totalsSelected = await dbClient.query("SELECT COUNT(*)::int AS count FROM job_applications WHERE LOWER(status) = 'selected'")
     const perJob = await dbClient.query(`
-      SELECT j.id, j.title, j.is_active, COALESCE(COUNT(a.id),0)::int AS applications,
+      SELECT j.id, j.title, COALESCE(COUNT(a.id),0)::int AS applications,
              COALESCE(SUM(CASE WHEN LOWER(a.status)='selected' THEN 1 ELSE 0 END),0)::int AS selected
       FROM jobs j LEFT JOIN job_applications a ON a.job_id = j.id
-      GROUP BY j.id, j.title, j.is_active
+      GROUP BY j.id, j.title
       ORDER BY applications DESC
     `)
 
@@ -1158,14 +1146,14 @@ app.get('/api/v1/tpo/stats/summary.pdf', async (req, res) => {
     doc.moveDown()
     doc.fontSize(12).text(`Generated: ${new Date().toLocaleString()}`)
     doc.moveDown()
-    doc.text(`Total Jobs: ${totalsJobs.rows[0].count} (Active: ${activeJobs.rows[0].count})`)
+    doc.text(`Total Jobs: ${totalsJobs.rows[0].count}`)
     doc.text(`Total Applications: ${totalsApps.rows[0].count}`)
     doc.text(`Total Selected: ${totalsSelected.rows[0].count}`)
     doc.moveDown()
     doc.fontSize(14).text('Applications by Job')
     doc.moveDown(0.5)
     perJob.rows.forEach((r) => {
-      doc.fontSize(12).text(`• [${r.id}] ${r.title} (${r.is_active ? 'Active' : 'Closed'}) — Applications: ${r.applications}, Selected: ${r.selected}`)
+      doc.fontSize(12).text(`• [${r.id}] ${r.title} — Applications: ${r.applications}, Selected: ${r.selected}`)
     })
 
     await dbClient.query('INSERT INTO tpo_reports (generated_by, type, data_json, generated_at) VALUES ($1,$2,$3,NOW())', [null, 'summary_pdf', JSON.stringify(perJob.rows)])
@@ -1336,8 +1324,7 @@ app.post('/api/v1/users/register', async (req, res) => {
 app.get('/api/v1/tpo/jobs', async (req, res) => {
   try {
     const result = await dbClient.query(`
-      SELECT j.id, j.title, j.company, j.location, j.posted, j.status, j.job_url, 
-             CASE WHEN j.status = 'Closed' THEN FALSE ELSE j.is_active END as is_active,
+      SELECT j.id, j.title, j.company, j.location, j.posted, j.status, j.job_url,
              COALESCE((SELECT COUNT(a.id) FROM job_applications a WHERE a.job_id = j.id),0)::int AS applicants
       FROM jobs j
       ORDER BY j.posted DESC`)
@@ -1352,9 +1339,9 @@ app.post('/api/v1/tpo/jobs', async (req, res) => {
     const { title, company, location, salary, type, description, requirements, deadline, created_by, job_url } = req.body || {}
     if (!title || !company) return res.status(400).json({ error: 'Missing title/company' })
     const result = await dbClient.query(
-      `INSERT INTO jobs (title, company, location, salary, type, description, requirements, deadline, status, created_by, posted, updated_at, job_url, is_active)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'Active',$9,NOW(),NOW(),$10, TRUE)
-       RETURNING id, title, company, location, salary, type, posted, deadline, status, job_url, is_active`,
+      `INSERT INTO jobs (title, company, location, salary, type, description, requirements, deadline, status, created_by, posted, updated_at, job_url)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'Active',$9,NOW(),NOW(),$10)
+       RETURNING id, title, company, location, salary, type, posted, deadline, status, job_url`,
       [title, company, location || '', salary || '', type || 'Full-time', description || '', requirements || '', deadline || null, created_by || null, job_url || null]
     )
     const msg = `Company: ${company}. Location: ${location || '—'}. Type: ${type || 'Full-time'}`
@@ -1373,78 +1360,17 @@ app.put('/api/v1/tpo/jobs/:job_id', async (req, res) => {
   try {
     const jobId = parseInt(req.params.job_id)
     const { title, company, location, salary, type, description, requirements, deadline, status, job_url } = req.body || {}
-
-    // 1. Fetch current status first to enforce logic in JS
-    const currentJobRes = await dbClient.query('SELECT status, is_active FROM jobs WHERE id = $1', [jobId])
-    if (currentJobRes.rows.length === 0) return res.status(404).json({ error: 'Job not found' })
-    
-    const currentJob = currentJobRes.rows[0]
-    let newStatus = status || currentJob.status
-    let newIsActive = (status !== undefined) ? (status === 'Active') : currentJob.is_active
-
-    // FORCE: If currently closed, it MUST stay closed.
-    if (currentJob.status === 'Closed') {
-      newStatus = 'Closed'
-      newIsActive = false
-    }
-    // FORCE: If input is 'Closed', it MUST become inactive.
-    if (newStatus === 'Closed') {
-      newIsActive = false
-    }
-
     const result = await dbClient.query(
       `UPDATE jobs SET 
         title = COALESCE($1,title), company = COALESCE($2,company), location = COALESCE($3,location),
         salary = COALESCE($4,salary), type = COALESCE($5,type), description = COALESCE($6,description),
-        requirements = COALESCE($7,requirements), deadline = COALESCE($8,deadline), 
-        status = $9,
-        is_active = $10,
-        job_url = COALESCE($11,job_url), updated_at = NOW()
-       WHERE id = $12
-       RETURNING id, title, company, location, salary, type, posted, deadline, status, job_url, is_active`,
-      [title || null, company || null, location || null, salary || null, type || null, description || null, requirements || null, deadline || null, newStatus, newIsActive, job_url || null, jobId]
+        requirements = COALESCE($7,requirements), deadline = COALESCE($8,deadline), status = COALESCE($9,status),
+        job_url = COALESCE($10,job_url), updated_at = NOW()
+       WHERE id = $11
+       RETURNING id, title, company, location, salary, type, posted, deadline, status, job_url`,
+      [title || null, company || null, location || null, salary || null, type || null, description || null, requirements || null, deadline || null, status || null, job_url || null, jobId]
     )
-    res.json(result.rows[0])
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to update job' })
-  }
-})
-
-app.put('/api/v1/jobs/:job_id', async (req, res) => {
-  try {
-    const jobId = parseInt(req.params.job_id)
-    const { title, company, location, salary, type, description, requirements, deadline, status, job_url } = req.body || {}
-
-    // 1. Fetch current status first to enforce logic in JS
-    const currentJobRes = await dbClient.query('SELECT status, is_active FROM jobs WHERE id = $1', [jobId])
-    if (currentJobRes.rows.length === 0) return res.status(404).json({ error: 'Job not found' })
-    
-    const currentJob = currentJobRes.rows[0]
-    let newStatus = status || currentJob.status
-    let newIsActive = (status !== undefined) ? (status === 'Active') : currentJob.is_active
-
-    // FORCE: If currently closed, it MUST stay closed.
-    if (currentJob.status === 'Closed') {
-      newStatus = 'Closed'
-      newIsActive = false
-    }
-    // FORCE: If input is 'Closed', it MUST become inactive.
-    if (newStatus === 'Closed') {
-      newIsActive = false
-    }
-
-    const result = await dbClient.query(
-      `UPDATE jobs SET 
-        title = COALESCE($1,title), company = COALESCE($2,company), location = COALESCE($3,location),
-        salary = COALESCE($4,salary), type = COALESCE($5,type), description = COALESCE($6,description),
-        requirements = COALESCE($7,requirements), deadline = COALESCE($8,deadline), 
-        status = $9,
-        is_active = $10,
-        job_url = COALESCE($11,job_url), updated_at = NOW()
-       WHERE id = $12
-       RETURNING id, title, company, location, salary, type, posted, deadline, status, job_url, is_active`,
-      [title || null, company || null, location || null, salary || null, type || null, description || null, requirements || null, deadline || null, newStatus, newIsActive, job_url || null, jobId]
-    )
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Job not found' })
     res.json(result.rows[0])
   } catch (error) {
     res.status(500).json({ error: 'Failed to update job' })
@@ -1502,71 +1428,6 @@ app.put('/api/v1/files/:file_id/verify', async (req, res) => {
     res.json(result.rows[0])
   } catch (error) {
     res.status(500).json({ error: 'Failed to verify file' })
-  }
-})
-
-// --- EVENTS API ---
-
-// Create Event
-app.post('/api/v1/events', async (req, res) => {
-  try {
-    const { title, description, location, date, event_time, form_url, created_by } = req.body || {}
-    if (!title || !date) return res.status(400).json({ error: 'Title and date are required' })
-    const result = await dbClient.query(
-      `INSERT INTO events (title, description, location, date, event_time, form_url, created_by, status, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'Upcoming', NOW())
-       RETURNING *`,
-      [title, description || '', location || '', date, event_time || '', form_url || '', created_by || null]
-    )
-    res.status(201).json(result.rows[0])
-  } catch (error) {
-    console.error('Create event error:', error)
-    res.status(500).json({ error: 'Failed to create event' })
-  }
-})
-
-// Get Events
-app.get('/api/v1/events', async (req, res) => {
-  try {
-    const { status } = req.query
-    let query = `SELECT * FROM events`
-    let params = []
-    if (status && status !== 'All') {
-      query += ` WHERE status = $1`
-      params.push(status)
-    }
-    query += ` ORDER BY date ASC`
-    const result = await dbClient.query(query, params)
-    res.json(result.rows)
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch events' })
-  }
-})
-
-// Update Event
-app.put('/api/v1/events/:id', async (req, res) => {
-  try {
-    const eventId = parseInt(req.params.id)
-    const { title, description, location, date, event_time, form_url, status } = req.body || {}
-    
-    const result = await dbClient.query(
-      `UPDATE events SET 
-        title = COALESCE($1, title),
-        description = COALESCE($2, description),
-        location = COALESCE($3, location),
-        date = COALESCE($4, date),
-        event_time = COALESCE($5, event_time),
-        form_url = COALESCE($6, form_url),
-        status = COALESCE($7, status)
-       WHERE id = $8
-       RETURNING *`,
-      [title, description, location, date, event_time, form_url, status, eventId]
-    )
-    
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Event not found' })
-    res.json(result.rows[0])
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to update event' })
   }
 })
 
