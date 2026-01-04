@@ -837,6 +837,18 @@ app.put('/api/v1/tpo/events/:event_id', async (req, res) => {
   }
 })
 
+// TPO: delete event
+app.delete('/api/v1/tpo/events/:event_id', async (req, res) => {
+  try {
+    const eventId = parseInt(req.params.event_id)
+    const result = await dbClient.query('DELETE FROM events WHERE id = $1 RETURNING id', [eventId])
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Event not found' })
+    res.json({ success: true, id: result.rows[0].id })
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete event' })
+  }
+})
+
 // Student: register to event
 app.post('/api/v1/events/:event_id/register', async (req, res) => {
   try {

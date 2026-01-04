@@ -1225,10 +1225,21 @@ export default function TPODashboard() {
                             try {
                               const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ status: 'Cancelled' }) })
                               if (res.ok) {
-                                setTpoEvents(prev => prev.filter(e => e.id !== event.id))
+                                // Refresh to show updated status or filter it out if we are in 'Upcoming' tab
+                                const updated = await res.json()
+                                setTpoEvents(prev => prev.map(e => e.id === event.id ? { ...e, status: 'Cancelled' } : e))
                               }
                             } catch {}
                           }}>Cancel</Button>
+                          <Button variant="destructive" size="sm" onClick={async()=>{
+                            if(!confirm('Are you sure you want to delete this event?')) return;
+                            try {
+                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}`, { method:'DELETE' })
+                              if (res.ok) {
+                                setTpoEvents(prev => prev.filter(e => e.id !== event.id))
+                              }
+                            } catch {}
+                          }}>Delete</Button>
                           <Button variant="outline" onClick={async()=>{
                             try {
                               const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ status: 'Completed' }) })
