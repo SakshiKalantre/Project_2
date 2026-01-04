@@ -1505,6 +1505,71 @@ app.put('/api/v1/files/:file_id/verify', async (req, res) => {
   }
 })
 
+// --- EVENTS API ---
+
+// Create Event
+app.post('/api/v1/events', async (req, res) => {
+  try {
+    const { title, description, location, date, event_time, form_url, created_by } = req.body || {}
+    if (!title || !date) return res.status(400).json({ error: 'Title and date are required' })
+    const result = await dbClient.query(
+      `INSERT INTO events (title, description, location, date, event_time, form_url, created_by, status, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'Upcoming', NOW())
+       RETURNING *`,
+      [title, description || '', location || '', date, event_time || '', form_url || '', created_by || null]
+    )
+    res.status(201).json(result.rows[0])
+  } catch (error) {
+    console.error('Create event error:', error)
+    res.status(500).json({ error: 'Failed to create event' })
+  }
+})
+
+// Get Events
+app.get('/api/v1/events', async (req, res) => {
+  try {
+    const { status } = req.query
+    let query = `SELECT * FROM events`
+    let params = []
+    if (status && status !== 'All') {
+      query += ` WHERE status = $1`
+      params.push(status)
+    }
+    query += ` ORDER BY date ASC`
+    const result = await dbClient.query(query, params)
+    res.json(result.rows)
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch events' })
+  }
+})
+
+// Update Event
+app.put('/api/v1/events/:id', async (req, res) => {
+  try {
+    const eventId = parseInt(req.params.id)
+    const { title, description, location, date, event_time, form_url, status } = req.body || {}
+    
+    const result = await dbClient.query(
+      `UPDATE events SET 
+        title = COALESCE($1, title),
+        description = COALESCE($2, description),
+        location = COALESCE($3, location),
+        date = COALESCE($4, date),
+        event_time = COALESCE($5, event_time),
+        form_url = COALESCE($6, form_url),
+        status = COALESCE($7, status)
+       WHERE id = $8
+       RETURNING *`,
+      [title, description, location, date, event_time, form_url, status, eventId]
+    )
+    
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Event not found' })
+    res.json(result.rows[0])
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update event' })
+  }
+})
+
 app.get('/health', (req, res) => {
     res.json({ status: 'healthy' });
 });
