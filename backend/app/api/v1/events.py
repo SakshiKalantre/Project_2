@@ -8,7 +8,7 @@ from app.schemas.event import EventCreate, EventResponse, EventUpdate
 
 router = APIRouter()
 
-@router.post("/", response_model=EventCreate)
+@router.post("/", response_model=EventResponse)
 def create_event(event: EventCreate, db: Session = Depends(get_db)):
     db_event = Event(**event.dict())
     db.add(db_event)

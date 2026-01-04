@@ -59,6 +59,11 @@ export default function TPODashboard() {
   const [messages, setMessages] = useState<Record<number, string>>({})
   const [openDetailsUserId, setOpenDetailsUserId] = useState<number | null>(null)
   const [detailData, setDetailData] = useState<any>(null)
+  const normalizeEvents = (arr: any[]) => arr.map((e:any)=>({
+    ...e,
+    date: e.date || (e.event_date ? new Date(e.event_date).toISOString().slice(0,10) : undefined),
+    time: e.time || e.event_time
+  }))
 
   const fetchTpoAndData = async () => {
     try {
@@ -150,7 +155,7 @@ export default function TPODashboard() {
       const evs = await fetch(`${API_BASE_DEFAULT}/api/v1/events${eventFilter==='All'?'':`?status=${encodeURIComponent(eventFilter)}`}`)
       if (evs.ok) {
         const rows = await evs.json()
-        setTpoEvents(rows)
+        setTpoEvents(normalizeEvents(rows))
       }
     } catch {}
   }
@@ -199,27 +204,35 @@ export default function TPODashboard() {
         } catch {}
       }
       const dateStr = (eventForm.date || '').slice(0,10)
-      const payloadFull: any = { title: eventForm.title.trim(), description: eventForm.description || '', location: eventForm.location || '', time: (eventForm.time || '').trim(), status: 'Upcoming', form_url: eventForm.form_url || '', category: eventForm.category || '' }
-      if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) payloadFull.date = dateStr
-      let res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payloadFull) })
+      const payloadNode: any = { title: eventForm.title.trim(), description: eventForm.description || 'Event', location: eventForm.location || '', time: (eventForm.time || '').trim(), status: 'Upcoming', form_url: eventForm.form_url || '', category: eventForm.category || '' }
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) payloadNode.date = dateStr
+      let res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payloadNode) })
       if (!res.ok) {
-        try {
-          const errText = await res.text()
-          console.error('Create event error:', errText)
-        } catch {}
-        const payloadMinimal = { title: eventForm.title.trim() }
-        res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payloadMinimal) })
-        if (!res.ok) {
-          try { const errText2 = await res.text(); console.error('Create event minimal error:', errText2) } catch {}
-          alert('Failed to create event')
+        let errText = ''
+        try { errText = await res.text() } catch {}
+        const payloadFastApi = {
+          title: eventForm.title.trim(),
+          description: eventForm.description || 'Event',
+          location: eventForm.location || 'TBD',
+          event_date: (dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) ? new Date(`${dateStr}T00:00:00Z`).toISOString() : new Date().toISOString(),
+          event_time: (eventForm.time || '').trim() || '00:00',
+          created_by: creator || 0
+        }
+        const res2 = await fetch(`${API_BASE_DEFAULT}/api/v1/events`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payloadFastApi) })
+        if (!res2.ok) {
+          let errText2 = ''
+          try { errText2 = await res2.text() } catch {}
+          alert(`Failed to create event`)
+          console.error('Create event errors:', { tpoEndpointError: errText, eventsEndpointError: errText2 })
           return
         }
+        res = res2
       }
       const row = await res.json()
       setTpoEvents(prev => [row, ...prev])
       try {
         const evs = await fetch(`${API_BASE_DEFAULT}/api/v1/events`)
-        if (evs.ok) setTpoEvents(await evs.json())
+        if (evs.ok) { const rows = await evs.json(); setTpoEvents(normalizeEvents(rows)) }
       } catch {}
       setIsCreatingEvent(false)
       setEventForm({ title:'', description:'', location:'', date:'', time:'', form_url:'', category:'' })
@@ -1002,10 +1015,10 @@ export default function TPODashboard() {
                   </Button>
                 </div>
                 <div className="flex gap-2 mb-4">
-                  <Button variant={eventFilter==='Upcoming'?'default':'outline'} onClick={async()=>{ setEventFilter('Upcoming'); const evs = await fetch(`${API_BASE_DEFAULT}/api/v1/events?status=Upcoming`); if (evs.ok) setTpoEvents(await evs.json()) }}>Upcoming</Button>
-                  <Button variant={eventFilter==='Completed'?'default':'outline'} onClick={async()=>{ setEventFilter('Completed'); const evs = await fetch(`${API_BASE_DEFAULT}/api/v1/events?status=Completed`); if (evs.ok) setTpoEvents(await evs.json()) }}>Completed</Button>
-                  <Button variant={eventFilter==='Cancelled'?'default':'outline'} onClick={async()=>{ setEventFilter('Cancelled'); const evs = await fetch(`${API_BASE_DEFAULT}/api/v1/events?status=Cancelled`); if (evs.ok) setTpoEvents(await evs.json()) }}>Cancelled</Button>
-                  <Button variant={eventFilter==='All'?'default':'outline'} onClick={async()=>{ setEventFilter('All'); const evs = await fetch(`${API_BASE_DEFAULT}/api/v1/events`); if (evs.ok) setTpoEvents(await evs.json()) }}>All</Button>
+                  <Button variant={eventFilter==='Upcoming'?'default':'outline'} onClick={async()=>{ setEventFilter('Upcoming'); const evs = await fetch(`${API_BASE_DEFAULT}/api/v1/events?status=Upcoming`); if (evs.ok) { const rows = await evs.json(); setTpoEvents(normalizeEvents(rows)) } }}>Upcoming</Button>
+                  <Button variant={eventFilter==='Completed'?'default':'outline'} onClick={async()=>{ setEventFilter('Completed'); const evs = await fetch(`${API_BASE_DEFAULT}/api/v1/events?status=Completed`); if (evs.ok) { const rows = await evs.json(); setTpoEvents(normalizeEvents(rows)) } }}>Completed</Button>
+                  <Button variant={eventFilter==='Cancelled'?'default':'outline'} onClick={async()=>{ setEventFilter('Cancelled'); const evs = await fetch(`${API_BASE_DEFAULT}/api/v1/events?status=Cancelled`); if (evs.ok) { const rows = await evs.json(); setTpoEvents(normalizeEvents(rows)) } }}>Cancelled</Button>
+                  <Button variant={eventFilter==='All'?'default':'outline'} onClick={async()=>{ setEventFilter('All'); const evs = await fetch(`${API_BASE_DEFAULT}/api/v1/events`); if (evs.ok) { const rows = await evs.json(); setTpoEvents(normalizeEvents(rows)) } }}>All</Button>
                 </div>
                 {isCreatingEvent && (
                   <Card className="border-none shadow-md mb-6">
