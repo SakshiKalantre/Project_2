@@ -860,16 +860,6 @@ export default function StudentDashboard() {
                               >Google Form</a>
                             </div>
                           )}
-                          {event.template_url && (
-                            <div className="flex items-center text-gray-600">
-                              <a
-                                className="underline text-maroon"
-                                href={event.template_url}
-                                target="_blank"
-                                rel="noreferrer"
-                              >Event Template</a>
-                            </div>
-                          )}
                         </div>
                         
                         <div className="mt-6">
