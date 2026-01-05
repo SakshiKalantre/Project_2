@@ -9,6 +9,7 @@ from pathlib import Path
 
 from app.db.session import get_db
 from app.models.resume import Resume
+from app.models.event import Event
 from app.models.user import User
 from app.models.notification import Notification
 from app.core.config import settings
@@ -49,6 +50,23 @@ def upload_to_r2(prefix: str, upload_file: UploadFile, user_id: int) -> str:
         # If no public base URL configured, return S3-style URL
         return f"{settings.R2_ENDPOINT.rstrip('/')}/{settings.R2_BUCKET_NAME}/{key}"
     return f"{settings.R2_PUBLIC_BASE_URL.rstrip('/')}/{key}"
+
+@router.post("/events/{event_id}/template")
+async def upload_event_template(
+    event_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    ev = db.query(Event).filter(Event.id == event_id).first()
+    if not ev:
+        raise HTTPException(status_code=404, detail="Event not found")
+    allowed_types = ["application/pdf", "image/jpeg", "image/png"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Invalid file type")
+    public_url = upload_to_r2("event-template", file, getattr(ev, 'created_by', 0) or 0)
+    ev.template_url = public_url
+    db.commit(); db.refresh(ev)
+    return {"event_id": ev.id, "template_url": ev.template_url}
 
 @router.post("/resumes", response_model=ResumeResponse)
 async def upload_resume(

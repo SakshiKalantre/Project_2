@@ -10,6 +10,7 @@ class EventBase(BaseModel):
     event_time: str
     status: Optional[str] = None
     form_url: Optional[str] = None
+    template_url: Optional[str] = None
     category: Optional[str] = None
 
 class EventCreate(EventBase):
@@ -24,6 +25,7 @@ class EventUpdate(BaseModel):
     status: Optional[str] = None
     is_active: Optional[bool] = None
     form_url: Optional[str] = None
+    template_url: Optional[str] = None
     category: Optional[str] = None
 
 class EventResponse(EventBase):

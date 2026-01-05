@@ -51,6 +51,7 @@ export default function TPODashboard() {
   const [tpoEvents, setTpoEvents] = useState<Array<any>>([])
   const [isCreatingEvent, setIsCreatingEvent] = useState(false)
   const [eventForm, setEventForm] = useState({ title:'', description:'', location:'', date:'', time:'', form_url:'', category:'' })
+  const [eventTemplateFile, setEventTemplateFile] = useState<File | null>(null)
   const [editingEventId, setEditingEventId] = useState<number | null>(null)
   const [editEventForm, setEditEventForm] = useState({ title:'', description:'', location:'', date:'', time:'', status:'Upcoming' })
   const [openEventId, setOpenEventId] = useState<number | null>(null)
@@ -232,6 +233,18 @@ export default function TPODashboard() {
         res = res2
       }
       const row = await res.json()
+      // Optional: upload template to Cloudflare R2
+      if (eventTemplateFile) {
+        try {
+          const fd = new FormData()
+          fd.append('file', eventTemplateFile)
+          const up = await fetch(`${API_BASE_DEFAULT}/api/v1/files/events/${row.id}/template`, { method:'POST', body: fd })
+          if (up.ok) {
+            const uj = await up.json()
+            row.template_url = uj.template_url
+          }
+        } catch {}
+      }
       setTpoEvents(prev => [row, ...prev])
       try {
         const evs = await fetch(`${API_BASE_DEFAULT}/api/v1/events`)
@@ -239,6 +252,7 @@ export default function TPODashboard() {
       } catch {}
       setIsCreatingEvent(false)
       setEventForm({ title:'', description:'', location:'', date:'', time:'', form_url:'', category:'' })
+      setEventTemplateFile(null)
     } catch { alert('Failed to create event') }
   }
 
@@ -1059,6 +1073,10 @@ export default function TPODashboard() {
                           <Input id="evFormUrl" placeholder="https://forms.gle/..." value={eventForm.form_url} onChange={(e)=>setEventForm({...eventForm, form_url:e.target.value})} />
                         </div>
                         <div className="md:col-span-2">
+                          <Label htmlFor="evTemplate">Upload Event Template (PDF/Image)</Label>
+                          <Input id="evTemplate" type="file" accept=".pdf,image/*" onChange={(e)=> setEventTemplateFile(e.target.files?.[0] || null)} />
+                        </div>
+                        <div className="md:col-span-2">
                           <Label htmlFor="evCategory">Category</Label>
                           <Input id="evCategory" placeholder="e.g. Workshop, Talk" value={eventForm.category} onChange={(e)=>setEventForm({...eventForm, category:e.target.value})} />
                         </div>
@@ -1112,6 +1130,11 @@ export default function TPODashboard() {
                           {event.form_url && (
                             <div className="flex items-center text-gray-600">
                               <a className="underline text-maroon" href={event.form_url} target="_blank" rel="noreferrer">Form Link</a>
+                            </div>
+                          )}
+                          {event.template_url && (
+                            <div className="flex items-center text-gray-600">
+                              <a className="underline text-maroon" href={event.template_url} target="_blank" rel="noreferrer">Template</a>
                             </div>
                           )}
                         </div>
