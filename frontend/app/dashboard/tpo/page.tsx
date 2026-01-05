@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import LogoutButton from '@/components/LogoutButton'
 import { useUser } from '@clerk/nextjs'
@@ -26,27 +26,19 @@ import {
 
 const API_BASE_DEFAULT = process.env.NEXT_PUBLIC_API_URL || 'https://project-2-payz.onrender.com'
 
-type ClerkUserLike = { primaryEmailAddress?: { emailAddress?: string }; emailAddresses?: Array<{ emailAddress?: string }> }
-type StudentProfile = { id: number; name: string; email: string; degree: string; year: string; status: string }
-type ResumeSummary = { id: number; name: string; email: string; fileName: string; uploaded: string; status: string }
-type ApprovedStudent = { user_id: number; first_name?: string; last_name?: string; email: string; degree?: string; year?: string; placement_status?: string; resume_id?: number; resume_name?: string }
-type Event = { id: number; title: string; description?: string; location?: string; date?: string; time?: string; status?: string; form_url?: string; category?: string; template_url?: string; registered?: number }
-type RawEvent = Event & { event_date?: string; event_time?: string }
-type DetailData = { user: { first_name?: string; last_name?: string; email?: string } | null; profile: { phone?: string; degree?: string; year?: string; skills?: string; about?: string } | null } | null
-
 export default function TPODashboard() {
   const { user } = useUser()
   const [activeTab, setActiveTab] = useState('profiles')
   const [isCreatingJob, setIsCreatingJob] = useState(false)
-  const [jobs, setJobs] = useState<Array<{ id: number; title: string; company: string; location: string; status?: string }>>([])
+  const [jobs, setJobs] = useState<Array<any>>([])
   const [jobForm, setJobForm] = useState({ title:'', company:'', location:'', salary:'', type:'Full-time', description:'', requirements:'', deadline:'', job_url:'' })
   const [tpoUserId, setTpoUserId] = useState<number | null>(null)
   const [tpoDisplay, setTpoDisplay] = useState<{ name: string; email: string }>({ name: '', email: '' })
-  const [pendingProfiles, setPendingProfiles] = useState<StudentProfile[]>([])
-  const [pendingResumes, setPendingResumes] = useState<ResumeSummary[]>([])
-  const [verifiedResumes, setVerifiedResumes] = useState<ResumeSummary[]>([])
+  const [pendingProfiles, setPendingProfiles] = useState<Array<any>>([])
+  const [pendingResumes, setPendingResumes] = useState<Array<any>>([])
+  const [verifiedResumes, setVerifiedResumes] = useState<Array<any>>([])
   const [resumeFilter, setResumeFilter] = useState<'pending'|'verified'>('pending')
-  const [approvedStudents, setApprovedStudents] = useState<ApprovedStudent[]>([])
+  const [approvedStudents, setApprovedStudents] = useState<Array<any>>([])
   const [tpoProfile, setTpoProfile] = useState({ phone:'' })
   const [tpoName, setTpoName] = useState('')
   const [isEditingProfile, setIsEditingProfile] = useState(false)
@@ -55,34 +47,34 @@ export default function TPODashboard() {
   const [editingJobId, setEditingJobId] = useState<number | null>(null)
   const [editJobForm, setEditJobForm] = useState<{ title:string; company:string; location:string; status:string }>({ title:'', company:'', location:'', status:'Active' })
   const [openApplicantsJobId, setOpenApplicantsJobId] = useState<number | null>(null)
-  const [applicants, setApplicants] = useState<unknown[]>([])
-  const [tpoEvents, setTpoEvents] = useState<Event[]>([])
+  const [applicants, setApplicants] = useState<Array<any>>([])
+  const [tpoEvents, setTpoEvents] = useState<Array<any>>([])
   const [isCreatingEvent, setIsCreatingEvent] = useState(false)
   const [eventForm, setEventForm] = useState({ title:'', description:'', location:'', date:'', time:'', form_url:'', category:'' })
   const [eventTemplateFile, setEventTemplateFile] = useState<File | null>(null)
   const [editingEventId, setEditingEventId] = useState<number | null>(null)
   const [editEventForm, setEditEventForm] = useState({ title:'', description:'', location:'', date:'', time:'', status:'Upcoming' })
   const [openEventId, setOpenEventId] = useState<number | null>(null)
-  const [eventRegs, setEventRegs] = useState<unknown[]>([])
+  const [eventRegs, setEventRegs] = useState<Array<any>>([])
   const [eventFilter, setEventFilter] = useState<'Upcoming'|'Completed'|'Cancelled'|'All'>('Upcoming')
   const [messages, setMessages] = useState<Record<number, string>>({})
   const [openDetailsUserId, setOpenDetailsUserId] = useState<number | null>(null)
-  const [detailData, setDetailData] = useState<DetailData>(null)
+  const [detailData, setDetailData] = useState<any>(null)
   const [savingEventId, setSavingEventId] = useState<number | null>(null)
   const [remindingEventId, setRemindingEventId] = useState<number | null>(null)
   const [completingEventId, setCompletingEventId] = useState<number | null>(null)
-  const normalizeEvents = (arr: RawEvent[]): Event[] => arr.map((e)=>({
+  const normalizeEvents = (arr: any[]) => arr.map((e:any)=>({
     ...e,
     date: e.date || (e.event_date ? new Date(e.event_date).toISOString().slice(0,10) : undefined),
     time: e.time || e.event_time
   }))
 
-  const fetchTpoAndData = useCallback(async () => {
+  const fetchTpoAndData = async () => {
     try {
       let email: string | null = null
       if (user) {
-        const u = user as unknown as ClerkUserLike
-        email = u?.primaryEmailAddress?.emailAddress || u?.emailAddresses?.[0]?.emailAddress || null
+        // @ts-ignore
+        email = user.primaryEmailAddress?.emailAddress || user.emailAddresses?.[0]?.emailAddress || null
       }
       if (!email) {
         const stored = typeof window !== 'undefined' ? localStorage.getItem('currentUser') : null
@@ -117,8 +109,8 @@ export default function TPODashboard() {
       }
       const p = await fetch(`/api/tpo/pending-profiles`, { cache: 'no-store' })
       if (p.ok) {
-        const rows: Array<{ user_id: number; first_name?: string; last_name?: string; email: string; degree?: string; year?: string; has_profile?: boolean }> = await p.json()
-        setPendingProfiles(rows.map((r)=>{
+        const rows = await p.json()
+        setPendingProfiles(rows.map((r:any)=>{
           const name = (`${r.first_name || ''} ${r.last_name || ''}`.trim()) || (r.email?.split('@')[0] || 'Student')
           return {
             id: r.user_id,
@@ -132,8 +124,8 @@ export default function TPODashboard() {
       }
       const pr = await fetch(`${API_BASE_DEFAULT}/api/v1/files/tpo/pending-resumes`)
       if (pr.ok) {
-        const rows: Array<{ id:number; first_name?: string; last_name?: string; email:string; file_name:string; uploaded_at?: string; is_verified?: boolean }> = await pr.json()
-        setPendingResumes(rows.map((r)=>({
+        const rows = await pr.json()
+        setPendingResumes(rows.map((r:any)=>({
           id: r.id,
           name: `${r.first_name} ${r.last_name}`.trim(),
           email: r.email,
@@ -144,8 +136,8 @@ export default function TPODashboard() {
       }
       const vr = await fetch(`${API_BASE_DEFAULT}/api/v1/files/tpo/verified-resumes`)
       if (vr.ok) {
-        const rows: Array<{ id:number; first_name?: string; last_name?: string; email:string; file_name:string; uploaded_at?: string }> = await vr.json()
-        setVerifiedResumes(rows.map((r)=>({
+        const rows = await vr.json()
+        setVerifiedResumes(rows.map((r:any)=>({
           id: r.id,
           name: `${r.first_name} ${r.last_name}`.trim(),
           email: r.email,
@@ -161,18 +153,37 @@ export default function TPODashboard() {
       }
       const tj = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs`)
       if (tj.ok) {
-        const jobsRows: Array<{ id:number; title:string; company:string; location:string; status?:string }> = await tj.json()
+        const jobsRows = await tj.json()
         setJobs(jobsRows)
       }
       const evs = await fetch(`${API_BASE_DEFAULT}/api/v1/events${eventFilter==='All'?'':`?status=${encodeURIComponent(eventFilter)}`}`)
       if (evs.ok) {
-        const rows: RawEvent[] = await evs.json()
+        const rows = await evs.json()
         setTpoEvents(normalizeEvents(rows))
       }
     } catch {}
-  }, [user, eventFilter])
+  }
 
-  
+  const jobPostings = [
+    {
+      id: 1,
+      title: 'Software Engineer',
+      company: 'TechCorp',
+      location: 'Mumbai',
+      applicants: 24,
+      posted: '2024-01-05',
+      status: 'Active'
+    },
+    {
+      id: 2,
+      title: 'Data Analyst',
+      company: 'DataSystems',
+      location: 'Pune',
+      applicants: 18,
+      posted: '2024-01-03',
+      status: 'Active'
+    }
+  ]
 
   const createEvent = async () => {
     try {
@@ -182,8 +193,8 @@ export default function TPODashboard() {
         try {
           let email: string | null = null
           if (user) {
-            const u = user as unknown as ClerkUserLike
-            email = u?.primaryEmailAddress?.emailAddress || u?.emailAddresses?.[0]?.emailAddress || null
+            // @ts-ignore
+            email = user.primaryEmailAddress?.emailAddress || user.emailAddresses?.[0]?.emailAddress || null
           }
           if (!email) {
             const stored = typeof window !== 'undefined' ? localStorage.getItem('currentUser') : null
@@ -197,7 +208,7 @@ export default function TPODashboard() {
         } catch {}
       }
       const dateStr = (eventForm.date || '').slice(0,10)
-      const payloadNode: { title: string; description: string; location: string; time: string; status: string; form_url: string; category: string; date?: string } = { title: eventForm.title.trim(), description: eventForm.description || 'Event', location: eventForm.location || '', time: (eventForm.time || '').trim(), status: 'Upcoming', form_url: eventForm.form_url || '', category: eventForm.category || '' }
+      const payloadNode: any = { title: eventForm.title.trim(), description: eventForm.description || 'Event', location: eventForm.location || '', time: (eventForm.time || '').trim(), status: 'Upcoming', form_url: eventForm.form_url || '', category: eventForm.category || '' }
       if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) payloadNode.date = dateStr
       let res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payloadNode) })
       if (!res.ok) {
@@ -246,17 +257,17 @@ export default function TPODashboard() {
   }
 
   useEffect(() => {
-    let timer: number | null = null
+    let timer: any
     const refreshEventRegs = async () => {
       try {
         if (openEventId) {
           const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${openEventId}/registrations`)
-          if (res.ok) { const regs: unknown[] = await res.json(); setEventRegs(regs) }
+          if (res.ok) setEventRegs(await res.json())
         }
       } catch {}
     }
     refreshEventRegs()
-    if (openEventId) timer = setInterval(refreshEventRegs, 7000) as unknown as number
+    if (openEventId) timer = setInterval(refreshEventRegs, 7000)
     return () => { if (timer) clearInterval(timer) }
   }, [openEventId])
 
@@ -265,18 +276,18 @@ export default function TPODashboard() {
     setTpoEvents(prev => prev.map(e => e.id === openEventId ? { ...e, registered: eventRegs.length } : e))
   }, [eventRegs, openEventId])
   useEffect(() => {
-    let timer: number | null = null
+    let timer: any
     const refreshApplicants = async () => {
       try {
         if (openApplicantsJobId) {
           const res = await fetch(`${API_BASE_DEFAULT}/api/v1/jobs/${openApplicantsJobId}/applications`)
-          if (res.ok) { const arr: unknown[] = await res.json(); setApplicants(arr) }
+          if (res.ok) setApplicants(await res.json())
         }
       } catch {}
     }
     refreshApplicants()
     if (openApplicantsJobId) {
-      timer = setInterval(refreshApplicants, 10000) as unknown as number
+      timer = setInterval(refreshApplicants, 10000)
     }
     return () => { if (timer) clearInterval(timer) }
   }, [openApplicantsJobId])
@@ -287,7 +298,7 @@ export default function TPODashboard() {
   }, [applicants, openApplicantsJobId])
 
   useEffect(() => {
-    let poll: number | null = null
+    let poll: any
     const refreshJobs = async () => {
       try {
         if (activeTab === 'jobs') {
@@ -297,44 +308,44 @@ export default function TPODashboard() {
       } catch {}
     }
     refreshJobs()
-    if (activeTab === 'jobs') poll = setInterval(refreshJobs, 10000) as unknown as number
+    if (activeTab === 'jobs') poll = setInterval(refreshJobs, 10000)
     return () => { if (poll) clearInterval(poll) }
   }, [activeTab])
 
   useEffect(() => {
-    let poll: number | null = null
+    let poll: any
     const refreshResumes = async () => {
       try {
         if (activeTab === 'resumes') {
-      const pr = await fetch(`${API_BASE_DEFAULT}/api/v1/files/tpo/pending-resumes`)
-      if (pr.ok) {
-        const rows: Array<{ id:number; first_name?: string; last_name?: string; email:string; file_name:string; uploaded_at?: string; is_verified?: boolean }> = await pr.json()
-        setPendingResumes(rows.map((r)=>({
-          id: r.id,
-          name: `${r.first_name || ''} ${r.last_name || ''}`.trim(),
-          email: r.email,
-          fileName: r.file_name,
-          uploaded: r.uploaded_at ? new Date(r.uploaded_at).toLocaleString() : '',
-          status: r.is_verified ? 'Verified' : 'Pending'
-        })))
-      }
-      const vr = await fetch(`${API_BASE_DEFAULT}/api/v1/files/tpo/verified-resumes`)
-      if (vr.ok) {
-        const rows: Array<{ id:number; first_name?: string; last_name?: string; email:string; file_name:string; uploaded_at?: string }> = await vr.json()
-        setVerifiedResumes(rows.map((r)=>({
-          id: r.id,
-          name: `${r.first_name || ''} ${r.last_name || ''}`.trim(),
-          email: r.email,
-          fileName: r.file_name,
-          uploaded: r.uploaded_at ? new Date(r.uploaded_at).toLocaleString() : '',
-          status: 'Verified'
-        })))
-      }
+          const pr = await fetch(`${API_BASE_DEFAULT}/api/v1/files/tpo/pending-resumes`)
+          if (pr.ok) {
+            const rows = await pr.json()
+            setPendingResumes(rows.map((r:any)=>({
+              id: r.id,
+              name: `${r.first_name || ''} ${r.last_name || ''}`.trim(),
+              email: r.email,
+              fileName: r.file_name,
+              uploaded: r.uploaded_at ? new Date(r.uploaded_at).toLocaleString() : '',
+              status: r.is_verified ? 'Verified' : 'Pending'
+            })))
+          }
+          const vr = await fetch(`${API_BASE_DEFAULT}/api/v1/files/tpo/verified-resumes`)
+          if (vr.ok) {
+            const rows = await vr.json()
+            setVerifiedResumes(rows.map((r:any)=>({
+              id: r.id,
+              name: `${r.first_name || ''} ${r.last_name || ''}`.trim(),
+              email: r.email,
+              fileName: r.file_name,
+              uploaded: r.uploaded_at ? new Date(r.uploaded_at).toLocaleString() : '',
+              status: 'Verified'
+            })))
+          }
         }
       } catch {}
     }
     refreshResumes()
-    if (activeTab === 'resumes') poll = setInterval(refreshResumes, 10000) as unknown as number
+    if (activeTab === 'resumes') poll = setInterval(refreshResumes, 10000)
     return () => { if (poll) clearInterval(poll) }
   }, [activeTab])
 
@@ -349,11 +360,11 @@ export default function TPODashboard() {
     }
     applyRole()
     fetchTpoAndData()
-  }, [user, fetchTpoAndData])
+  }, [user])
 
   const handleApproveProfile = async (userId: number) => {
     try {
-      await fetch(`${API_BASE_DEFAULT}/api/v1/users/tpo/profiles/${userId}/approve`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ notes: 'Approved by TPO' }) })
+      const res = await fetch(`${API_BASE_DEFAULT}/api/v1/users/tpo/profiles/${userId}/approve`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ notes: 'Approved by TPO' }) })
       fetchTpoAndData()
     } catch {}
   }
@@ -613,14 +624,14 @@ export default function TPODashboard() {
                         <div className="mt-4 text-sm text-gray-600">
                           <div>Email: {profile.email}</div>
                           <div className="mt-2 flex gap-2">
-                            <Textarea placeholder="Write a message..." value={messages[profile.id] || ''} onChange={(e)=>setMessages((m)=>({ ...m, [profile.id]: e.target.value }))} rows={2} />
+                            <Textarea placeholder="Write a message..." value={(messages as any)[profile.id] || ''} onChange={(e)=>setMessages((m:any)=>({ ...m, [profile.id]: e.target.value }))} rows={2} />
                             <Button variant="outline" onClick={async()=>{
-                              const msg = messages[profile.id] || ''
+                              const msg = (messages as any)[profile.id] || ''
                               if (!msg.trim()) { alert('Enter a message'); return }
                               try {
                                 const res = await fetch(`/api/notifications/send`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ user_id: profile.id, email: profile.email, title: 'Message', message: msg }) })
                                 if (!res.ok) alert('Failed to send message')
-                                else { alert('Message sent'); setMessages((m)=>({ ...m, [profile.id]: '' })) }
+                                else { alert('Message sent'); setMessages((m:any)=>({ ...m, [profile.id]: '' })) }
                               } catch { alert('Failed to send message') }
                             }}>Send</Button>
                           </div>
