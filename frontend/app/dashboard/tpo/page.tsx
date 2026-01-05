@@ -1167,7 +1167,10 @@ export default function TPODashboard() {
                               const ok = typeof window !== 'undefined' ? window.confirm('Send reminders to registered attendees?') : true
                               if (!ok) return
                               setRemindingEventId(event.id)
-                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}/reminders`, { method:'POST' })
+                              let res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}/reminders`, { method:'POST' })
+                              if (!res.ok) {
+                                res = await fetch(`${API_BASE_DEFAULT}/api/v1/events/${event.id}/reminders`, { method:'POST' })
+                              }
                               if (res.ok) {
                                 alert('Reminders sent')
                               } else {
@@ -1179,17 +1182,14 @@ export default function TPODashboard() {
                           <Button variant="outline" disabled={completingEventId===event.id || ((event.status||'')==='Completed')} onClick={async()=>{
                             try {
                               setCompletingEventId(event.id)
-                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ status: 'Completed' }) })
+                              let res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ status: 'Completed' }) })
+                              if (!res.ok) {
+                                res = await fetch(`${API_BASE_DEFAULT}/api/v1/events/${event.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ event_time: event.time || undefined, event_date: event.date ? new Date(`${event.date}T00:00:00Z`).toISOString() : undefined, title: event.title || undefined }) })
+                              }
                               if (res.ok) {
                                 const updated = await res.json()
-                                setTpoEvents(prev => prev.map(e => e.id === event.id ? { ...e, ...updated } : e))
-                                try {
-                                  await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/notifications/broadcast`, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ title: 'Event Completed', message: `${updated.title || 'Event'} has been marked as completed.` })
-                                  })
-                                } catch {}
+                                const merged = { ...event, ...updated, status: 'Completed' }
+                                setTpoEvents(prev => prev.map(e => e.id === event.id ? merged : e))
                               } else {
                                 alert('Failed to mark as completed')
                               }
