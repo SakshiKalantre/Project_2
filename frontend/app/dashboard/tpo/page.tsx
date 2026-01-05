@@ -1116,7 +1116,7 @@ export default function TPODashboard() {
                             <>
                               <Button variant="outline" onClick={async()=>{
                                 try {
-                                  const payload:any = { title: editEventForm.title || null, location: editEventForm.location || null, date: editEventForm.date || null, time: editEventForm.time || null, status: editEventForm.status || null }
+                                  const payload = { title: editEventForm.title || null, location: editEventForm.location || null, date: editEventForm.date || null, time: editEventForm.time || null, status: editEventForm.status || null }
                                   const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
                                   if (res.ok) {
                                     const updated = await res.json()
