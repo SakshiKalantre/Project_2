@@ -13,6 +13,7 @@ interface FileRecord {
   filename: string
   file_type: string
   file_url?: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any
 }
 

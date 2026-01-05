@@ -3,15 +3,13 @@
 import { useUser, UserButton } from '@clerk/nextjs'
 import Link from 'next/link'
 import Image from 'next/image'
-import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 
 export default function HomePage() {
+  const { isSignedIn, user } = useUser()
   const clerkReady = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY)
-  const state = clerkReady ? useUser() : ({ isSignedIn: false, user: undefined } as any)
-  const { isSignedIn, user } = state
 
   return (
     <div className="min-h-screen bg-cream">
@@ -362,7 +360,7 @@ export default function HomePage() {
               <div className="space-y-3">
                 <details className="group border border-gray-300 rounded-lg p-4 cursor-pointer hover:border-maroon transition-colors">
                   <summary className="font-semibold text-gray-800 group-open:text-maroon">How do I schedule a campus visit?</summary>
-                  <p className="mt-2 text-gray-600 text-sm">Contact our TPO team through the portal or email placements@smpndoshi.edu.in to schedule your company's campus recruitment drive.</p>
+                  <p className="mt-2 text-gray-600 text-sm">Contact our TPO team through the portal or email placements@smpndoshi.edu.in to schedule your company&apos;s campus recruitment drive.</p>
                 </details>
                 <details className="group border border-gray-300 rounded-lg p-4 cursor-pointer hover:border-maroon transition-colors">
                   <summary className="font-semibold text-gray-800 group-open:text-maroon">What is the hiring process?</summary>
@@ -388,7 +386,7 @@ export default function HomePage() {
                   <p className="mt-2 text-gray-600 text-sm">Over 150+ companies visit our campus annually, offering diverse opportunities across IT, Finance, Marketing, and other sectors.</p>
                 </details>
                 <details className="group border border-gray-300 rounded-lg p-4 cursor-pointer hover:border-maroon transition-colors">
-                  <summary className="font-semibold text-gray-800 group-open:text-maroon">What if I don't get placed in the first round?</summary>
+                  <summary className="font-semibold text-gray-800 group-open:text-maroon">What if I don&apos;t get placed in the first round?</summary>
                   <p className="mt-2 text-gray-600 text-sm">We have continuous recruitment drives throughout the academic year. Additional opportunities are available in subsequent rounds.</p>
                 </details>
               </div>
@@ -444,7 +442,7 @@ export default function HomePage() {
           </div>
           
           <div className="border-t border-cream/20 mt-8 pt-8 text-center text-cream/80">
-            <p>&copy; {new Date().getFullYear()} Smt. P.N. Doshi Women's College. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} Smt. P.N. Doshi Women&apos;s College. All rights reserved.</p>
           </div>
         </div>
       </footer>
