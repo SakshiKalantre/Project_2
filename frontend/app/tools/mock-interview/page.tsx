@@ -162,7 +162,7 @@ export default function MockInterview() {
   const [role, setRole] = useState('Software Engineer')
   const [resumeText, setResumeText] = useState('')
   const [step, setStep] = useState(0)
-  const [answers, setAnswers] = useState<any[]>([])
+  const [answers, setAnswers] = useState<(string | number)[]>([])
   const techDict = ['react','next','node','express','typescript','javascript','python','java','spring','docker','kubernetes','aws','gcp','azure','graphql','rest','sql','postgres','mysql','mongodb','redis','pandas','numpy','tableau','power bi','spark','hadoop','terraform','ci','cd','jenkins','git','linux']
   const extractKeywords = (text: string) => {
     const tokens = (text.toLowerCase().match(/\b[a-z][a-z\+\-\.]{2,}\b/g) || [])
@@ -179,7 +179,7 @@ export default function MockInterview() {
     { type:'open', text:`Explain architectural decisions around ${kw[4] || 'key components'}.` }
   ] : []
   const questions: Question[] = [ ...banks[role], ...behavioral, ...aptitude, ...personalized ]
-  useEffect(()=>{ setStep(0); setAnswers(Array(questions.length).fill('')) ; setFeedback(null) }, [role, resumeText])
+  useEffect(()=>{ setStep(0); setAnswers(Array.from({ length: questions.length }, () => '')) ; setFeedback(null) }, [role, resumeText, questions.length])
   const [feedback, setFeedback] = useState<{ scores:number[]; tips:string[]; correct:number } | null>(null)
 
   const onSubmit = () => {

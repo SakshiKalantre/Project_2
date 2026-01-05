@@ -47,7 +47,7 @@ export default function HomePage() {
       {/* Hero Section */}
       <section className="py-20 bg-gradient-to-r from-maroon to-maroon/80 text-white">
         <div className="container mx-auto px-4 text-center">
-          <h1 className="text-5xl md:text-6xl font-bold mb-6">Smt. P.N. Doshi Women's College</h1>
+          <h1 className="text-5xl md:text-6xl font-bold mb-6">Smt. P.N. Doshi Women’s College</h1>
           <p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto">
             Empowering women through quality education and exceptional placement opportunities
           </p>
@@ -204,7 +204,7 @@ export default function HomePage() {
                   <div>
                     <h4 className="font-semibold text-lg text-gray-800">Address</h4>
                     <p className="text-gray-600">
-                      Smt. P.N. Doshi Women's College<br />
+                      Smt. P.N. Doshi Women’s College<br />
                       Wadala West, Mumbai - 400031
                     </p>
                   </div>

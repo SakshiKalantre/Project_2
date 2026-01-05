@@ -2,15 +2,15 @@
 
 import { useUser, UserButton } from '@clerk/nextjs'
 import Link from 'next/link'
-import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 
 export default function HomePage() {
+  const { isSignedIn, user } = useUser()
   const clerkReady = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY)
-  const state = clerkReady ? useUser() : ({ isSignedIn: false, user: undefined } as any)
-  const { isSignedIn, user } = state
+  const signedIn = clerkReady ? isSignedIn : false
+  const currentUser = clerkReady ? user : undefined
 
   return (
     <div className="min-h-screen bg-cream">
@@ -32,9 +32,9 @@ export default function HomePage() {
           </nav>
           
           <div className="flex items-center space-x-4">
-            {isSignedIn && clerkReady ? (
+            {signedIn && clerkReady ? (
               <>
-                <span className="text-sm text-gray-600">Welcome, {user.firstName}</span>
+                <span className="text-sm text-gray-600">Welcome, {currentUser?.firstName}</span>
                 <UserButton afterSignOutUrl="/" />
                 <Link href="/dashboard">
                   <Button variant="default" className="bg-maroon hover:bg-maroon/90">Dashboard</Button>
@@ -52,7 +52,7 @@ export default function HomePage() {
       {/* Hero Section */}
       <section className="py-20 bg-gradient-to-r from-maroon to-maroon/80 text-white">
         <div className="container mx-auto px-4 text-center">
-          <h1 className="text-5xl md:text-6xl font-bold mb-6">Smt. P.N. Doshi Women's College</h1>
+          <h1 className="text-5xl md:text-6xl font-bold mb-6">Smt. P.N. Doshi Women’s College</h1>
           <p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto">
             Empowering women through quality education and exceptional placement opportunities
           </p>
@@ -111,7 +111,7 @@ export default function HomePage() {
             </div>
             <div className="bg-gradient-to-r from-maroon to-gold rounded-xl w-full h-96 flex items-center justify-center shadow-lg">
               <div className="text-center px-4">
-                <h3 className="text-white text-3xl font-bold mb-2">Smt. P.N. Doshi Women's College</h3>
+                <h3 className="text-white text-3xl font-bold mb-2">Smt. P.N. Doshi Women’s College</h3>
                 <p className="text-white text-xl opacity-90">Empowering Women Through Education</p>
               </div>
             </div>
@@ -229,7 +229,7 @@ export default function HomePage() {
                   <div>
                     <h4 className="font-semibold text-lg text-gray-800">Address</h4>
                     <p className="text-gray-600">
-                      Smt. P.N. Doshi Women's College<br />
+                      Smt. P.N. Doshi Women’s College<br />
                       Wadala West, Mumbai - 400031
                     </p>
                   </div>

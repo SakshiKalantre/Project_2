@@ -8,7 +8,13 @@ import { Button } from "@/components/ui/button";
 
 declare global {
   interface Window {
-    grecaptcha: any;
+    grecaptcha?: {
+      ready: (callback: () => void) => void;
+      render: (
+        containerId: string,
+        parameters: { sitekey: string; callback: (token: string) => void }
+      ) => void;
+    };
   }
 }
 
@@ -84,13 +90,12 @@ export default function SignInPage() {
     e.preventDefault();
     if (!validateSignIn()) return;
     try {
-      const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://project-2-payz.onrender.com';
       const userRes = await fetch(`/api/users/by-email?email=${encodeURIComponent(email)}`)
       if (!userRes.ok) {
         setErrors({ submit: 'No account found for this email. Please sign up first.' });
         return;
       }
-      const u = await userRes.json();
+      await userRes.json();
       // Store login data in localStorage for demo
       const loginData = { email, role, rememberMe, secretPassword: role !== "STUDENT" ? secretPassword : undefined };
       localStorage.setItem("currentUser", JSON.stringify(loginData));
