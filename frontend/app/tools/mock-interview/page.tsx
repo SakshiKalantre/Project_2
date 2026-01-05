@@ -179,7 +179,7 @@ export default function MockInterview() {
     { type:'open', text:`Explain architectural decisions around ${kw[4] || 'key components'}.` }
   ] : []
   const questions: Question[] = [ ...banks[role], ...behavioral, ...aptitude, ...personalized ]
-  useEffect(()=>{ setStep(0); setAnswers(Array(questions.length).fill('')) ; setFeedback(null) }, [role, resumeText])
+  useEffect(()=>{ setStep(0); setAnswers(Array(questions.length).fill('')) ; setFeedback(null) }, [role, resumeText, questions.length])
   const [feedback, setFeedback] = useState<{ scores:number[]; tips:string[]; correct:number } | null>(null)
 
   const onSubmit = () => {

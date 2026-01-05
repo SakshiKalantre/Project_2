@@ -6,8 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "init-db": "node init-db.js",
-    "test-reminders": "node test-reminders.js"
+    "init-db": "node init-db.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.943.0",

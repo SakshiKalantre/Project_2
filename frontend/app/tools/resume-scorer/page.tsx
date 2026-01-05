@@ -4,10 +4,38 @@ import { useEffect, useState } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://project-2-payz.onrender.com'
+
+interface FileRecord {
+  id: number
+  filename: string
+  file_type: string
+  file_url?: string
+  [key: string]: any
+}
+
+interface ScoreResult {
+  score: number
+  suggestions: string[]
+  missingKeywords: string[]
+  coverage: number
+  metricsCount: number
+  actionVerbCount: number
+  sections: {
+    experience: boolean
+    education: boolean
+    projects: boolean
+    skills: boolean
+  }
+  contact: {
+    email: boolean
+    phone: boolean
+    github: boolean
+    linkedin: boolean
+  }
+}
 
 function scoreText(text: string, role: string) {
   const lower = text.toLowerCase()
@@ -65,17 +93,17 @@ function scoreText(text: string, role: string) {
 export default function ResumeScorer() {
   const { user } = useUser()
   const [userId, setUserId] = useState<number | null>(null)
-  const [files, setFiles] = useState<any[]>([])
+  const [files, setFiles] = useState<FileRecord[]>([])
   const [resumeText, setResumeText] = useState('')
   const [targetRole, setTargetRole] = useState('Software Engineer')
-  const [result, setResult] = useState<any>(null)
+  const [result, setResult] = useState<ScoreResult | null>(null)
 
   useEffect(() => {
     const load = async () => {
       try {
         let email: string | null = null
         if (user) {
-          // @ts-ignore
+          // @ts-expect-error
           email = user.primaryEmailAddress?.emailAddress || user.emailAddresses?.[0]?.emailAddress || null
         }
         if (!email) {
