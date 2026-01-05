@@ -805,6 +805,7 @@ app.put('/api/v1/tpo/events/:event_id', async (req, res) => {
   try {
     const eventId = parseInt(req.params.event_id)
     const { title, description, location, date, time, status, form_url, category } = req.body || {}
+    const before = await dbClient.query('SELECT id, status, title, location FROM events WHERE id = $1', [eventId])
     const result = await dbClient.query(
       `UPDATE events SET
          title = COALESCE($1,title),
@@ -822,7 +823,45 @@ app.put('/api/v1/tpo/events/:event_id', async (req, res) => {
       [title || null, description || null, location || null, date || null, time || null, status || null, form_url || null, category || null, eventId]
     )
     if (result.rows.length === 0) return res.status(404).json({ error: 'Event not found' })
-    res.json(result.rows[0])
+    const updated = result.rows[0]
+
+    // Audit status change
+    if (before.rows.length && typeof status === 'string' && status && (before.rows[0].status || '') !== status) {
+      await dbClient.query('INSERT INTO event_audit_logs (event_id, old_status, new_status, changed_by, notes, changed_at) VALUES ($1,$2,$3,$4,$5,NOW())', [eventId, (before.rows[0].status || ''), status, null, 'TPO update'])
+    }
+
+    // When marking completed, notify attendees and optionally email
+    if (typeof status === 'string' && status === 'Completed') {
+      const msg = `Event Completed: ${updated.title} at ${updated.location || ''}`
+      await dbClient.query(
+        `INSERT INTO notifications (user_id, title, message, created_at, is_read)
+         SELECT r.user_id, $1, $2, NOW(), FALSE FROM event_registrations r WHERE r.event_id = $3`,
+        ['Event Status Update', msg, eventId]
+      )
+      await dbClient.query(
+        `INSERT INTO reminder_logs (event_id, user_id, channel, status, attempt_count, sent_at)
+         SELECT r.event_id, r.user_id, 'in_app', 'sent', 1, NOW() FROM event_registrations r WHERE r.event_id = $1`,
+        [eventId]
+      )
+      if (mailTransport) {
+        const regs = await dbClient.query('SELECT r.user_id, u.email FROM event_registrations r JOIN users u ON u.id = r.user_id WHERE r.event_id = $1', [eventId])
+        for (const row of regs.rows) {
+          try {
+            if (row.email) {
+              await mailTransport.sendMail({ from: process.env.SMTP_FROM || process.env.SMTP_USER, to: row.email, subject: 'Event Completed', text: msg })
+              await dbClient.query('INSERT INTO reminder_logs (event_id, user_id, channel, status, attempt_count, sent_at) VALUES ($1,$2,\'email\',\'sent\',1,NOW())', [eventId, row.user_id])
+            } else {
+              await dbClient.query('INSERT INTO reminder_logs (event_id, user_id, channel, status, attempt_count, error_message) VALUES ($1,$2,\'email\',\'skipped\',0,\'No email\')', [eventId, row.user_id])
+            }
+          } catch (e) {
+            await dbClient.query('INSERT INTO reminder_logs (event_id, user_id, channel, status, attempt_count, error_message) VALUES ($1,$2,\'email\',\'failed\',1,$3)', [eventId, row.user_id, String(e && e.message || '')])
+          }
+        }
+      } else {
+        await dbClient.query('INSERT INTO reminder_logs (event_id, user_id, channel, status, attempt_count, error_message) SELECT r.event_id, r.user_id, \'email\', \'skipped\', 0, \"SMTP not configured\" FROM event_registrations r WHERE r.event_id = $1', [eventId])
+      }
+    }
+    res.json(updated)
   } catch (error) {
     res.status(500).json({ error: 'Failed to update event' })
   }
@@ -900,16 +939,98 @@ app.post('/api/v1/tpo/events/:event_id/reminders', async (req, res) => {
     const eventId = parseInt(req.params.event_id)
     const ev = await dbClient.query('SELECT id, title, COALESCE(date,event_date) AS date, event_time AS time, location FROM events WHERE id = $1', [eventId])
     if (ev.rows.length === 0) return res.status(404).json({ error: 'Event not found' })
-    const rows = await dbClient.query('SELECT user_id FROM event_registrations WHERE event_id = $1', [eventId])
+    const regs = await dbClient.query('SELECT r.user_id, u.email FROM event_registrations r JOIN users u ON u.id = r.user_id WHERE r.event_id = $1', [eventId])
     const msg = `Reminder: ${ev.rows[0].title} at ${ev.rows[0].location} on ${ev.rows[0].date || ''} ${ev.rows[0].time || ''}`
+
+    // In-app notifications
     await dbClient.query(
       `INSERT INTO notifications (user_id, title, message, created_at, is_read)
-       SELECT user_id, $1, $2, NOW(), FALSE FROM event_registrations WHERE event_id = $3`,
+       SELECT r.user_id, $1, $2, NOW(), FALSE FROM event_registrations r WHERE r.event_id = $3`,
       ['Event Reminder', msg, eventId]
     )
-    res.json({ success: true })
+    await dbClient.query(
+      `INSERT INTO reminder_logs (event_id, user_id, channel, status, attempt_count, sent_at)
+       SELECT r.event_id, r.user_id, 'in_app', 'sent', 1, NOW() FROM event_registrations r WHERE r.event_id = $1`,
+      [eventId]
+    )
+
+    // Email notifications if SMTP configured
+    let emailSent = 0
+    let emailFailed = 0
+    if (mailTransport) {
+      for (const row of regs.rows) {
+        const email = row.email
+        try {
+          if (email) {
+            await mailTransport.sendMail({
+              from: process.env.SMTP_FROM || process.env.SMTP_USER,
+              to: email,
+              subject: 'Event Reminder',
+              text: msg
+            })
+            emailSent++
+            await dbClient.query(
+              `INSERT INTO reminder_logs (event_id, user_id, channel, status, attempt_count, sent_at)
+               VALUES ($1,$2,'email','sent',1,NOW())`,
+              [eventId, row.user_id]
+            )
+          } else {
+            await dbClient.query(
+              `INSERT INTO reminder_logs (event_id, user_id, channel, status, attempt_count, error_message)
+               VALUES ($1,$2,'email','skipped',0,'No email')`,
+              [eventId, row.user_id]
+            )
+          }
+        } catch (e) {
+          emailFailed++
+          await dbClient.query(
+            `INSERT INTO reminder_logs (event_id, user_id, channel, status, attempt_count, error_message)
+             VALUES ($1,$2,'email','failed',1,$3)`,
+            [eventId, row.user_id, String(e && e.message || '')]
+          )
+        }
+      }
+    } else {
+      // No SMTP configured
+      await dbClient.query(
+        `INSERT INTO reminder_logs (event_id, user_id, channel, status, attempt_count, error_message)
+         SELECT r.event_id, r.user_id, 'email', 'skipped', 0, 'SMTP not configured' FROM event_registrations r WHERE r.event_id = $1`,
+        [eventId]
+      )
+    }
+
+    res.json({ success: true, in_app_sent: regs.rows.length, email_sent: emailSent, email_failed: emailFailed })
   } catch (error) {
     res.status(500).json({ error: 'Failed to send reminders' })
+  }
+})
+
+// Reminder status summary
+app.get('/api/v1/tpo/events/:event_id/reminders/status', async (req,res)=>{
+  try {
+    const eventId = parseInt(req.params.event_id)
+    const agg = await dbClient.query(`
+      SELECT channel, status, COUNT(*)::int AS count
+      FROM reminder_logs WHERE event_id = $1 GROUP BY channel, status
+    `, [eventId])
+    res.json(agg.rows)
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to load reminder status' })
+  }
+})
+
+// Monitoring: recent failures
+app.get('/api/v1/tpo/reminders/failures', async (req,res)=>{
+  try {
+    const since = req.query.since || '24 hours'
+    const rows = await dbClient.query(`
+      SELECT * FROM reminder_logs 
+      WHERE status = 'failed' AND created_at >= NOW() - ($1::interval)
+      ORDER BY created_at DESC LIMIT 200
+    `, [String(since)])
+    res.json(rows.rows)
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to load failures' })
   }
 })
 
@@ -1454,3 +1575,33 @@ const ensureExists = async (filePath) => {
   }
 }
   // moved to startup ensures block
+  // Reminder logs table
+  dbClient.query(`
+    CREATE TABLE IF NOT EXISTS reminder_logs (
+      id SERIAL PRIMARY KEY,
+      event_id INTEGER REFERENCES events(id) ON DELETE CASCADE,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      channel TEXT,
+      status TEXT,
+      attempt_count INTEGER DEFAULT 0,
+      error_message TEXT,
+      scheduled_at TIMESTAMP DEFAULT NOW(),
+      sent_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT NOW()
+    )`)
+    .then(()=>console.log('✓ Ensured reminder_logs table'))
+    .catch((e)=>console.error('reminder_logs ensure error', e))
+
+  // Event status audit logs
+  dbClient.query(`
+    CREATE TABLE IF NOT EXISTS event_audit_logs (
+      id SERIAL PRIMARY KEY,
+      event_id INTEGER REFERENCES events(id) ON DELETE CASCADE,
+      old_status TEXT,
+      new_status TEXT,
+      changed_by INTEGER REFERENCES users(id),
+      notes TEXT,
+      changed_at TIMESTAMP DEFAULT NOW()
+    )`)
+    .then(()=>console.log('✓ Ensured event_audit_logs table'))
+    .catch((e)=>console.error('event_audit_logs ensure error', e))
