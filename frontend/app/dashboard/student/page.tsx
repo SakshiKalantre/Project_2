@@ -349,7 +349,7 @@ export default function StudentDashboard() {
     reader.readAsDataURL(file)
   })
 
-  const postJSONWithProgress = (url: string, payload: any, setProgress: (n:number)=>void) => new Promise<Response>((resolve, reject) => {
+  const postJSONWithProgress = (url: string, payload: Record<string, unknown>, setProgress: (n:number)=>void) => new Promise<Response>((resolve, reject) => {
     const xhr = new XMLHttpRequest()
     xhr.open('POST', url)
     xhr.setRequestHeader('Content-Type', 'application/json')

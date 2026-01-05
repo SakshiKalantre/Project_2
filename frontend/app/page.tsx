@@ -52,7 +52,7 @@ export default function HomePage() {
       {/* Hero Section */}
       <section className="py-20 bg-gradient-to-r from-maroon to-maroon/80 text-white">
         <div className="container mx-auto px-4 text-center">
-          <h1 className="text-5xl md:text-6xl font-bold mb-6">Smt. P.N. Doshi Women's College</h1>
+          <h1 className="text-5xl md:text-6xl font-bold mb-6">Smt. P.N. Doshi Women&apos;s College</h1>
           <p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto">
             Empowering women through quality education and exceptional placement opportunities
           </p>
@@ -454,5 +454,22 @@ export default function HomePage() {
         </div>
       </footer>
     </div>
+  )
+}
+
+function CompanyLogo({ company }: { company: { name: string; logo: string } }) {
+  const [src, setSrc] = useState(company.logo)
+
+  return (
+    <Image 
+      src={src} 
+      alt={company.name}
+      width={150}
+      height={64}
+      className="max-w-full max-h-16 object-contain"
+      onError={() => {
+        setSrc(`https://ui-avatars.com/api/?name=${encodeURIComponent(company.name)}&background=7A1F2A&color=fff&size=128`)
+      }}
+    />
   )
 }

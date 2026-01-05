@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import LogoutButton from '@/components/LogoutButton'
 import { useUser } from '@clerk/nextjs'
@@ -24,21 +24,84 @@ import {
   Filter
 } from 'lucide-react'
 
+type Job = {
+  id: number
+  title: string
+  company: string
+  location: string
+  salary?: string
+  type?: string
+  description?: string
+  requirements?: string
+  deadline?: string
+  job_url?: string
+  status?: string
+  applicants?: number
+  created_at?: string
+}
+
+type StudentProfile = {
+  id: number
+  name: string
+  email: string
+  degree: string
+  year: string
+  status: string
+  user_id?: number
+}
+
+type Resume = {
+  id: number
+  name: string
+  email: string
+  fileName: string
+  uploaded: string
+  status: string
+}
+
+type TpoEvent = {
+  id: number
+  title: string
+  description?: string
+  location?: string
+  date?: string
+  time?: string
+  status: string
+  registered?: number
+}
+
+type EventRegistration = {
+  id: number
+  user_id: number
+  name: string
+  email: string
+  registered_at: string
+}
+
+type Applicant = {
+  id: number
+  user_id: number
+  name: string
+  email: string
+  status: string
+  applied_at: string
+}
+
 const API_BASE_DEFAULT = process.env.NEXT_PUBLIC_API_URL || 'https://project-2-payz.onrender.com'
 
 export default function TPODashboard() {
   const { user } = useUser()
   const [activeTab, setActiveTab] = useState('profiles')
   const [isCreatingJob, setIsCreatingJob] = useState(false)
-  const [jobs, setJobs] = useState<Array<any>>([])
+  const [jobs, setJobs] = useState<Job[]>([])
   const [jobForm, setJobForm] = useState({ title:'', company:'', location:'', salary:'', type:'Full-time', description:'', requirements:'', deadline:'', job_url:'' })
   const [tpoUserId, setTpoUserId] = useState<number | null>(null)
   const [tpoDisplay, setTpoDisplay] = useState<{ name: string; email: string }>({ name: '', email: '' })
-  const [pendingProfiles, setPendingProfiles] = useState<Array<any>>([])
-  const [pendingResumes, setPendingResumes] = useState<Array<any>>([])
-  const [verifiedResumes, setVerifiedResumes] = useState<Array<any>>([])
+  const [pendingProfiles, setPendingProfiles] = useState<StudentProfile[]>([])
+  const [pendingResumes, setPendingResumes] = useState<Resume[]>([])
+  const [verifiedResumes, setVerifiedResumes] = useState<Resume[]>([])
   const [resumeFilter, setResumeFilter] = useState<'pending'|'verified'>('pending')
-  const [approvedStudents, setApprovedStudents] = useState<Array<any>>([])
+  const [approvedStudents, setApprovedStudents] = useState<StudentProfile[]>([])
   const [tpoProfile, setTpoProfile] = useState({ phone:'' })
   const [tpoName, setTpoName] = useState('')
   const [isEditingProfile, setIsEditingProfile] = useState(false)
@@ -47,14 +110,14 @@ export default function TPODashboard() {
   const [editingJobId, setEditingJobId] = useState<number | null>(null)
   const [editJobForm, setEditJobForm] = useState<{ title:string; company:string; location:string; status:string }>({ title:'', company:'', location:'', status:'Active' })
   const [openApplicantsJobId, setOpenApplicantsJobId] = useState<number | null>(null)
-  const [applicants, setApplicants] = useState<Array<any>>([])
-  const [tpoEvents, setTpoEvents] = useState<Array<any>>([])
+  const [applicants, setApplicants] = useState<Applicant[]>([])
+  const [tpoEvents, setTpoEvents] = useState<TpoEvent[]>([])
   const [isCreatingEvent, setIsCreatingEvent] = useState(false)
   const [eventForm, setEventForm] = useState({ title:'', description:'', location:'', date:'', time:'', form_url:'', category:'' })
   const [editingEventId, setEditingEventId] = useState<number | null>(null)
   const [editEventForm, setEditEventForm] = useState({ title:'', description:'', location:'', date:'', time:'', status:'Upcoming' })
   const [openEventId, setOpenEventId] = useState<number | null>(null)
-  const [eventRegs, setEventRegs] = useState<Array<any>>([])
+  const [eventRegs, setEventRegs] = useState<EventRegistration[]>([])
   const [eventFilter, setEventFilter] = useState<'Upcoming'|'Completed'|'Cancelled'|'All'>('Upcoming')
   const [messages, setMessages] = useState<Record<number, string>>({})
   const [openDetailsUserId, setOpenDetailsUserId] = useState<number | null>(null)
@@ -155,26 +218,7 @@ export default function TPODashboard() {
     } catch {}
   }
 
-  const jobPostings = [
-    {
-      id: 1,
-      title: 'Software Engineer',
-      company: 'TechCorp',
-      location: 'Mumbai',
-      applicants: 24,
-      posted: '2024-01-05',
-      status: 'Active'
-    },
-    {
-      id: 2,
-      title: 'Data Analyst',
-      company: 'DataSystems',
-      location: 'Pune',
-      applicants: 18,
-      posted: '2024-01-03',
-      status: 'Active'
-    }
-  ]
+
 
   const createEvent = async () => {
     try {
@@ -199,7 +243,7 @@ export default function TPODashboard() {
         } catch {}
       }
       const dateStr = (eventForm.date || '').slice(0,10)
-      const payloadFull: any = { title: eventForm.title.trim(), description: eventForm.description || '', location: eventForm.location || '', time: (eventForm.time || '').trim(), status: 'Upcoming', form_url: eventForm.form_url || '', category: eventForm.category || '' }
+      const payloadFull: Record<string, unknown> = { title: eventForm.title.trim(), description: eventForm.description || '', location: eventForm.location || '', time: (eventForm.time || '').trim(), status: 'Upcoming', form_url: eventForm.form_url || '', category: eventForm.category || '' }
       if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) payloadFull.date = dateStr
       let res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payloadFull) })
       if (!res.ok) {

@@ -32,6 +32,7 @@ export default function SignInPage() {
   const [recaptchaError, setRecaptchaError] = useState("");
 
   useEffect(() => {
+    if (!SITE_KEY) return;
     const script = document.createElement("script");
     script.src = "https://www.google.com/recaptcha/api.js?render=explicit";
     script.async = true;

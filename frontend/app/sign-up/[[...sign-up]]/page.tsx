@@ -50,6 +50,12 @@ export default function SignUpPage() {
       }
     };
     document.body.appendChild(script);
+
+    return () => {
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
+    };
   }, [SITE_KEY]);
 
   useEffect(() => {}, []);
