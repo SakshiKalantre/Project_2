@@ -59,6 +59,9 @@ export default function TPODashboard() {
   const [messages, setMessages] = useState<Record<number, string>>({})
   const [openDetailsUserId, setOpenDetailsUserId] = useState<number | null>(null)
   const [detailData, setDetailData] = useState<any>(null)
+  const [savingEventId, setSavingEventId] = useState<number | null>(null)
+  const [remindingEventId, setRemindingEventId] = useState<number | null>(null)
+  const [completingEventId, setCompletingEventId] = useState<number | null>(null)
   const normalizeEvents = (arr: any[]) => arr.map((e:any)=>({
     ...e,
     date: e.date || (e.event_date ? new Date(e.event_date).toISOString().slice(0,10) : undefined),
@@ -1070,7 +1073,7 @@ export default function TPODashboard() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {tpoEvents.map((event) => (
-                    <Card key={event.id} className="border-none shadow-md">
+                    <Card key={event.id} className={`border-none shadow-md ${((event.status||'')==='Completed')?'opacity-60':''}`}>
                       <CardContent className="p-6">
                         <div className="flex justify-between">
                           <div>
@@ -1127,21 +1130,31 @@ export default function TPODashboard() {
                           }}>View Details</Button>
                           {editingEventId === event.id ? (
                             <>
-                              <Button variant="outline" onClick={async()=>{
+                              <Button variant="outline" disabled={savingEventId===event.id} onClick={async()=>{
                                 try {
+                                  if (!editEventForm.title.trim()) { alert('Title is required'); return }
+                                  setSavingEventId(event.id)
                                   const payload:any = { title: editEventForm.title || null, location: editEventForm.location || null, date: editEventForm.date || null, time: editEventForm.time || null, status: editEventForm.status || null }
-                                  const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
+                                  let res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
+                                  if (!res.ok) {
+                                    const payloadFA:any = { title: editEventForm.title || undefined, description: editEventForm.description || undefined, location: editEventForm.location || undefined, event_date: editEventForm.date ? new Date(`${editEventForm.date}T00:00:00Z`).toISOString() : undefined, event_time: editEventForm.time || undefined }
+                                    res = await fetch(`${API_BASE_DEFAULT}/api/v1/events/${event.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payloadFA) })
+                                  }
                                   if (res.ok) {
                                     const updated = await res.json()
                                     setTpoEvents(prev => prev.map(e => e.id === event.id ? { ...e, ...updated } : e))
+                                    alert('Event saved')
                                     setEditingEventId(null)
+                                  } else {
+                                    alert('Failed to save changes')
                                   }
-                                } catch {}
+                                } catch { alert('Failed to save changes') }
+                                finally { setSavingEventId(null) }
                               }}>
                                 <Check className="mr-2 h-4 w-4" />
-                                Save
+                                {savingEventId===event.id?'Saving...':'Save'}
                               </Button>
-                              <Button variant="outline" onClick={()=> setEditingEventId(null)}>
+                              <Button variant="outline" disabled={savingEventId===event.id} onClick={()=>{ setEditEventForm({ title: event.title || '', description: event.description || '', location: event.location || '', date: event.date || '', time: event.time || '', status: event.status || 'Upcoming' }); setEditingEventId(null) }}>
                                 <X className="mr-2 h-4 w-4" />
                                 Cancel
                               </Button>
@@ -1149,29 +1162,40 @@ export default function TPODashboard() {
                           ) : (
                             <Button variant="outline" onClick={()=>{ setEditingEventId(event.id); setEditEventForm({ title: event.title || '', description: event.description || '', location: event.location || '', date: event.date || '', time: event.time || '', status: event.status || 'Upcoming' }) }}>Edit</Button>
                           )}
-                          <Button variant="outline" onClick={async()=>{
+                          <Button variant="outline" disabled={remindingEventId===event.id || ((event.status||'')==='Completed')} onClick={async()=>{
                             try {
+                              const ok = typeof window !== 'undefined' ? window.confirm('Send reminders to registered attendees?') : true
+                              if (!ok) return
+                              setRemindingEventId(event.id)
                               const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}/reminders`, { method:'POST' })
-                              if (res.ok) alert('Reminders sent')
-                            } catch { alert('Failed to send reminders') }
-                          }}>Send Reminder</Button>
-                          <Button variant="destructive" className="bg-red-600 hover:bg-red-700 text-white" onClick={async()=>{
-                            try {
-                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ status: 'Cancelled' }) })
                               if (res.ok) {
-                                setTpoEvents(prev => prev.filter(e => e.id !== event.id))
+                                alert('Reminders sent')
+                              } else {
+                                alert('Failed to send reminders')
                               }
-                            } catch {}
-                          }}>Cancel</Button>
-                          <Button variant="outline" onClick={async()=>{
+                            } catch { alert('Failed to send reminders') }
+                            finally { setRemindingEventId(null) }
+                          }}>{remindingEventId===event.id?'Sending...':'Send Reminder'}</Button>
+                          <Button variant="outline" disabled={completingEventId===event.id || ((event.status||'')==='Completed')} onClick={async()=>{
                             try {
+                              setCompletingEventId(event.id)
                               const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ status: 'Completed' }) })
                               if (res.ok) {
                                 const updated = await res.json()
                                 setTpoEvents(prev => prev.map(e => e.id === event.id ? { ...e, ...updated } : e))
+                                try {
+                                  await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/notifications/broadcast`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ title: 'Event Completed', message: `${updated.title || 'Event'} has been marked as completed.` })
+                                  })
+                                } catch {}
+                              } else {
+                                alert('Failed to mark as completed')
                               }
-                            } catch {}
-                          }}>Mark Completed</Button>
+                            } catch { alert('Failed to mark as completed') }
+                            finally { setCompletingEventId(null) }
+                          }}>{completingEventId===event.id?'Marking...':'Mark Completed'}</Button>
                         </div>
                         {openEventId === event.id && (
                           <div className="mt-4 border-t pt-4">
