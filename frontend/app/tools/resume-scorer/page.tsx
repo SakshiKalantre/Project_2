@@ -17,7 +17,6 @@ function scoreText(text: string, role: string) {
     'Backend Developer': ['api','rest','graphql','database','postgres','mysql','mongodb','redis','rabbitmq','scalability','security','authentication'],
     'Cloud/DevOps': ['docker','kubernetes','terraform','aws','gcp','azure','ci/cd','monitoring','prometheus','grafana','logging']
   }
-  const commonSoft = ['communication','lead','team','collaborat','ownership','problem','critical','stakeholder']
   const actionVerbs = ['led','built','created','designed','implemented','optimized','automated','developed','delivered','deployed','refactored','improved']
   const metricsRegex = /\b\d+%|\b\d{2,}\b/g
   const sections = {
