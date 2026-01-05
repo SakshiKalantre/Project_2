@@ -103,7 +103,7 @@ export default function ResumeScorer() {
       try {
         let email: string | null = null
         if (user) {
-          // @ts-expect-error
+          // @ts-expect-error -- Clerk types are not fully compatible
           email = user.primaryEmailAddress?.emailAddress || user.emailAddresses?.[0]?.emailAddress || null
         }
         if (!email) {

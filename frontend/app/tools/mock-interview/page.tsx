@@ -162,7 +162,7 @@ export default function MockInterview() {
   const [role, setRole] = useState('Software Engineer')
   const [resumeText, setResumeText] = useState('')
   const [step, setStep] = useState(0)
-  const [answers, setAnswers] = useState<any[]>([])
+  const [answers, setAnswers] = useState<(string|number)[]>([])
   const techDict = ['react','next','node','express','typescript','javascript','python','java','spring','docker','kubernetes','aws','gcp','azure','graphql','rest','sql','postgres','mysql','mongodb','redis','pandas','numpy','tableau','power bi','spark','hadoop','terraform','ci','cd','jenkins','git','linux']
   const extractKeywords = (text: string) => {
     const tokens = (text.toLowerCase().match(/\b[a-z][a-z\+\-\.]{2,}\b/g) || [])
