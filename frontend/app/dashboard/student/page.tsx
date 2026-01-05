@@ -863,7 +863,7 @@ export default function StudentDashboard() {
                         </div>
                         
                         <div className="mt-6">
-                          <Button className="w-full bg-maroon hover:bg-maroon/90" disabled={!event.form_url} onClick={async()=>{
+                          <Button className="w-full bg-maroon hover:bg-maroon/90" disabled={(event.status||'Upcoming')!=='Upcoming'} onClick={async()=>{
                             try {
                               const stored = typeof window !== 'undefined' ? localStorage.getItem('currentUser') : null
                               const current = stored ? JSON.parse(stored) : null
@@ -885,22 +885,8 @@ export default function StudentDashboard() {
                                     try { const t = await r.text(); console.error('Register failed:', t) } catch {}
                                   }
                                 }
-                              } else {
-                                // Even if user lookup fails, still open the registration URL directly if present
-                                if (event.form_url) {
-                                  const w = window.open(event.form_url, '_blank')
-                                  if (!w) { const a=document.createElement('a'); a.href=event.form_url; a.target='_blank'; document.body.appendChild(a); a.click(); a.remove() }
-                                }
                               }
-                            } catch { 
-                              // On any error, still attempt to open registration URL directly
-                              if (event.form_url) {
-                                const w = window.open(event.form_url, '_blank')
-                                if (!w) { const a=document.createElement('a'); a.href=event.form_url; a.target='_blank'; document.body.appendChild(a); a.click(); a.remove() }
-                              } else {
-                                alert('Failed to register') 
-                              }
-                            }
+                            } catch { alert('Failed to register') }
                           }}>Register</Button>
                         </div>
                       </CardContent>
