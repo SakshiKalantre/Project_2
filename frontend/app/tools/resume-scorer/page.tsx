@@ -62,7 +62,7 @@ function scoreText(text: string, role: string) {
     linkedin: /(linkedin\.com)/i.test(text)
   }
   const roleKeys = banks[role] || []
-  const softHits = commonSoft.filter(k=> lower.includes(k))
+  // const softHits = commonSoft.filter(k=> lower.includes(k))
   const roleHits = roleKeys.filter(k=> lower.includes(k))
   const missingKeywords = roleKeys.filter(k=> !lower.includes(k)).slice(0,8)
   const actionCount = actionVerbs.reduce((acc, v)=> acc + (lower.includes(v) ? 1 : 0), 0)

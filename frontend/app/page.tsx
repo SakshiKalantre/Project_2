@@ -2,6 +2,7 @@
 
 import { useUser, UserButton } from '@clerk/nextjs'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -52,7 +53,7 @@ export default function HomePage() {
       {/* Hero Section */}
       <section className="py-20 bg-gradient-to-r from-maroon to-maroon/80 text-white">
         <div className="container mx-auto px-4 text-center">
-          <h1 className="text-5xl md:text-6xl font-bold mb-6">Smt. P.N. Doshi Women's College</h1>
+          <h1 className="text-5xl md:text-6xl font-bold mb-6">Smt. P.N. Doshi Women&apos;s College</h1>
           <p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto">
             Empowering women through quality education and exceptional placement opportunities
           </p>
@@ -111,7 +112,7 @@ export default function HomePage() {
             </div>
             <div className="bg-gradient-to-r from-maroon to-gold rounded-xl w-full h-96 flex items-center justify-center shadow-lg">
               <div className="text-center px-4">
-                <h3 className="text-white text-3xl font-bold mb-2">Smt. P.N. Doshi Women's College</h3>
+                <h3 className="text-white text-3xl font-bold mb-2">Smt. P.N. Doshi Women&apos;s College</h3>
                 <p className="text-white text-xl opacity-90">Empowering Women Through Education</p>
               </div>
             </div>
@@ -143,10 +144,13 @@ export default function HomePage() {
             ].map((company, index) => (
               <Card key={index} className="border-none shadow-md hover:shadow-lg transition-shadow bg-white">
                 <CardContent className="p-6 flex items-center justify-center h-32">
-                  <img 
+                  <Image 
                     src={company.logo} 
                     alt={company.name}
+                    width={150}
+                    height={64}
                     className="max-w-full max-h-16 object-contain"
+                    unoptimized
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
                       target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(company.name)}&background=7A1F2A&color=fff&size=128`;
@@ -229,7 +233,7 @@ export default function HomePage() {
                   <div>
                     <h4 className="font-semibold text-lg text-gray-800">Address</h4>
                     <p className="text-gray-600">
-                      Smt. P.N. Doshi Women's College<br />
+                      Smt. P.N. Doshi Women&apos;s College<br />
                       Wadala West, Mumbai - 400031
                     </p>
                   </div>
