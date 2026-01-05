@@ -71,11 +71,6 @@ export default function StudentDashboard() {
   const [jobListings, setJobListings] = useState<JobListing[]>([])
   const [events, setEvents] = useState<EventItem[]>([])
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
-  const normalizeEvents = (arr: any[]) => arr.map((e:any)=>({
-    ...e,
-    date: e.date || (e.event_date ? new Date(e.event_date).toISOString().slice(0,10) : undefined),
-    time: e.time || e.event_time
-  }))
 
   // Fetch data from our API
   useEffect(() => {
@@ -201,7 +196,7 @@ export default function StudentDashboard() {
         const eventsResponse = await fetch(`${API_BASE}/api/v1/events`)
         if (eventsResponse.ok) {
           const eventsData = await eventsResponse.json()
-          setEvents(normalizeEvents(eventsData))
+          setEvents(eventsData)
         }
 
         try {
@@ -258,29 +253,13 @@ export default function StudentDashboard() {
           const res = await fetch(`${API_BASE}/api/v1/events`)
           if (res.ok) {
             const rows = await res.json()
-            setEvents(normalizeEvents(rows))
+            setEvents(rows)
           }
         }
       } catch {}
     }
     refreshEvents()
   }, [activeTab])
-
-  useEffect(() => {
-    let poll: any
-    const pollEvents = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/v1/events`)
-        if (res.ok) {
-          const rows = await res.json()
-          setEvents(normalizeEvents(rows))
-        }
-      } catch {}
-    }
-    pollEvents()
-    poll = setInterval(pollEvents, 15000)
-    return () => { if (poll) clearInterval(poll) }
-  }, [])
 
   useEffect(() => {
     const applyRole = async () => {

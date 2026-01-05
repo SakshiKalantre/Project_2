@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://project-2-payz.onrender.com'
@@ -34,7 +33,6 @@ function scoreText(text: string, role: string) {
     linkedin: /(linkedin\.com)/i.test(text)
   }
   const roleKeys = banks[role] || []
-  const softHits = commonSoft.filter(k=> lower.includes(k))
   const roleHits = roleKeys.filter(k=> lower.includes(k))
   const missingKeywords = roleKeys.filter(k=> !lower.includes(k)).slice(0,8)
   const actionCount = actionVerbs.reduce((acc, v)=> acc + (lower.includes(v) ? 1 : 0), 0)
@@ -62,20 +60,48 @@ function scoreText(text: string, role: string) {
   return { score, suggestions, missingKeywords, coverage: keywordCoverage, metricsCount, actionVerbCount: actionCount, sections, contact }
 }
 
+interface UserFile {
+  id: number
+  filename: string
+  file_type: string
+  file_url: string
+}
+
+interface ScoringResult {
+  score: number
+  suggestions: string[]
+  missingKeywords: string[]
+  coverage: number
+  metricsCount: number
+  actionVerbCount: number
+  sections: {
+    experience: boolean
+    education: boolean
+    projects: boolean
+    skills: boolean
+  }
+  contact: {
+    email: boolean
+    phone: boolean
+    github: boolean
+    linkedin: boolean
+  }
+}
+
 export default function ResumeScorer() {
   const { user } = useUser()
   const [userId, setUserId] = useState<number | null>(null)
-  const [files, setFiles] = useState<any[]>([])
+  const [files, setFiles] = useState<UserFile[]>([])
   const [resumeText, setResumeText] = useState('')
   const [targetRole, setTargetRole] = useState('Software Engineer')
-  const [result, setResult] = useState<any>(null)
+  const [result, setResult] = useState<ScoringResult | null>(null)
 
   useEffect(() => {
     const load = async () => {
       try {
         let email: string | null = null
         if (user) {
-          // @ts-ignore
+          // @ts-expect-error Clerk types might be complex
           email = user.primaryEmailAddress?.emailAddress || user.emailAddresses?.[0]?.emailAddress || null
         }
         if (!email) {

@@ -158,28 +158,34 @@ function evaluate(answer: string) {
   return { score, tips }
 }
 
+const techDict = ['react','next','node','express','typescript','javascript','python','java','spring','docker','kubernetes','aws','gcp','azure','graphql','rest','sql','postgres','mysql','mongodb','redis','pandas','numpy','tableau','power bi','spark','hadoop','terraform','ci','cd','jenkins','git','linux']
+
+const extractKeywords = (text: string) => {
+  const tokens = (text.toLowerCase().match(/\b[a-z][a-z\+\-\.]{2,}\b/g) || [])
+  const freq: Record<string, number> = {}
+  tokens.forEach(t=>{ if (techDict.includes(t)) freq[t] = (freq[t]||0)+1 })
+  return Object.entries(freq).sort((a,b)=> b[1]-a[1]).slice(0,5).map(([k])=>k)
+}
+
 export default function MockInterview() {
   const [role, setRole] = useState('Software Engineer')
   const [resumeText, setResumeText] = useState('')
   const [step, setStep] = useState(0)
-  const [answers, setAnswers] = useState<any[]>([])
-  const techDict = ['react','next','node','express','typescript','javascript','python','java','spring','docker','kubernetes','aws','gcp','azure','graphql','rest','sql','postgres','mysql','mongodb','redis','pandas','numpy','tableau','power bi','spark','hadoop','terraform','ci','cd','jenkins','git','linux']
-  const extractKeywords = (text: string) => {
-    const tokens = (text.toLowerCase().match(/\b[a-z][a-z\+\-\.]{2,}\b/g) || [])
-    const freq: Record<string, number> = {}
-    tokens.forEach(t=>{ if (techDict.includes(t)) freq[t] = (freq[t]||0)+1 })
-    return Object.entries(freq).sort((a,b)=> b[1]-a[1]).slice(0,5).map(([k])=>k)
-  }
-  const kw = extractKeywords(resumeText)
-  const personalized: Question[] = resumeText.trim() ? [
+  const [answers, setAnswers] = useState<(string | number)[]>([])
+  
+  const kw = useMemo(() => extractKeywords(resumeText), [resumeText])
+  
+  const personalized: Question[] = useMemo(() => resumeText.trim() ? [
     { type:'open', text:`Describe a project using ${kw[0] || 'your primary technology'} and the measurable impact.` },
     { type:'open', text:`How did you test and deploy features built with ${kw[1] || 'your stack'}?` },
     { type:'open', text:`Share a performance optimization you implemented in ${kw[2] || 'your system'}.` },
     { type:'open', text:`Discuss an incident and how you mitigated it in ${kw[3] || 'production'}.` },
     { type:'open', text:`Explain architectural decisions around ${kw[4] || 'key components'}.` }
-  ] : []
-  const questions: Question[] = [ ...banks[role], ...behavioral, ...aptitude, ...personalized ]
-  useEffect(()=>{ setStep(0); setAnswers(Array(questions.length).fill('')) ; setFeedback(null) }, [role, resumeText])
+  ] : [], [kw, resumeText])
+
+  const questions: Question[] = useMemo(() => [ ...banks[role], ...behavioral, ...aptitude, ...personalized ], [role, personalized])
+
+  useEffect(()=>{ setStep(0); setAnswers(Array(questions.length).fill('')) ; setFeedback(null) }, [questions])
   const [feedback, setFeedback] = useState<{ scores:number[]; tips:string[]; correct:number } | null>(null)
 
   const onSubmit = () => {
