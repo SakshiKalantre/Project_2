@@ -48,6 +48,15 @@ type NotificationItem = {
   read: boolean
 }
 
+interface UserFile {
+  id: number
+  filename?: string
+  title?: string
+  file_type: string
+  uploaded_at?: string
+  file_url?: string
+}
+
 export default function StudentDashboard() {
   const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://project-2-payz.onrender.com'
   const { user } = useUser()
@@ -56,7 +65,7 @@ export default function StudentDashboard() {
   const [userId, setUserId] = useState<number | null>(null)
   const [resumeFile, setResumeFile] = useState<File | null>(null)
   const [certificateFile, setCertificateFile] = useState<File | null>(null)
-  const [userFiles, setUserFiles] = useState<Array<any>>([])
+  const [userFiles, setUserFiles] = useState<UserFile[]>([])
   const [resumeProgress, setResumeProgress] = useState<number>(0)
   const [certProgress, setCertProgress] = useState<number>(0)
   const [profile, setProfile] = useState({

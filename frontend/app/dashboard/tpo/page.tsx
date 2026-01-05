@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import LogoutButton from '@/components/LogoutButton'
 import { useUser } from '@clerk/nextjs'
@@ -25,6 +25,74 @@ import {
 } from 'lucide-react'
 
 const API_BASE_DEFAULT = process.env.NEXT_PUBLIC_API_URL || 'https://project-2-payz.onrender.com'
+
+interface Job {
+  id: number
+  title: string
+  company: string
+  location: string
+  applicants: number
+  posted: string
+  status: string
+  salary?: string
+  type?: string
+  description?: string
+  requirements?: string
+  deadline?: string
+  job_url?: string
+}
+
+interface PendingProfile {
+  id: number
+  name: string
+  email: string
+  degree: string
+  year: string
+  status: string
+}
+
+interface ResumeItem {
+  id: number
+  name: string
+  email: string
+  fileName: string
+  uploaded: string
+  status: string
+}
+
+interface ApprovedStudent {
+  user_id: number
+  first_name: string
+  last_name: string
+  email: string
+  degree: string
+  year: string
+  placement_status: string
+  resume_name?: string
+  resume_id?: number
+}
+
+interface TpoEvent {
+  id: number
+  title: string
+  description: string
+  location: string
+  date: string
+  time: string
+  status: string
+  registered?: number
+  form_url?: string
+  category?: string
+}
+
+interface Applicant {
+  id: number
+  user_id: number
+  name: string
+  email: string
+  resume_url?: string
+  applied_at: string
+}
 
 export default function TPODashboard() {
   const { user } = useUser()
@@ -153,28 +221,7 @@ export default function TPODashboard() {
         setTpoEvents(rows)
       }
     } catch {}
-  }
-
-  const jobPostings = [
-    {
-      id: 1,
-      title: 'Software Engineer',
-      company: 'TechCorp',
-      location: 'Mumbai',
-      applicants: 24,
-      posted: '2024-01-05',
-      status: 'Active'
-    },
-    {
-      id: 2,
-      title: 'Data Analyst',
-      company: 'DataSystems',
-      location: 'Pune',
-      applicants: 18,
-      posted: '2024-01-03',
-      status: 'Active'
-    }
-  ]
+  }, [user, eventFilter])
 
   const createEvent = async () => {
     try {
