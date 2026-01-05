@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import LogoutButton from '@/components/LogoutButton'
 import { useUser } from '@clerk/nextjs'
@@ -25,74 +25,6 @@ import {
 } from 'lucide-react'
 
 const API_BASE_DEFAULT = process.env.NEXT_PUBLIC_API_URL || 'https://project-2-payz.onrender.com'
-
-interface Job {
-  id: number
-  title: string
-  company: string
-  location: string
-  applicants: number
-  posted: string
-  status: string
-  salary?: string
-  type?: string
-  description?: string
-  requirements?: string
-  deadline?: string
-  job_url?: string
-}
-
-interface PendingProfile {
-  id: number
-  name: string
-  email: string
-  degree: string
-  year: string
-  status: string
-}
-
-interface ResumeItem {
-  id: number
-  name: string
-  email: string
-  fileName: string
-  uploaded: string
-  status: string
-}
-
-interface ApprovedStudent {
-  user_id: number
-  first_name: string
-  last_name: string
-  email: string
-  degree: string
-  year: string
-  placement_status: string
-  resume_name?: string
-  resume_id?: number
-}
-
-interface TpoEvent {
-  id: number
-  title: string
-  description: string
-  location: string
-  date: string
-  time: string
-  status: string
-  registered?: number
-  form_url?: string
-  category?: string
-}
-
-interface Applicant {
-  id: number
-  user_id: number
-  name: string
-  email: string
-  resume_url?: string
-  applied_at: string
-}
 
 export default function TPODashboard() {
   const { user } = useUser()
@@ -127,6 +59,14 @@ export default function TPODashboard() {
   const [messages, setMessages] = useState<Record<number, string>>({})
   const [openDetailsUserId, setOpenDetailsUserId] = useState<number | null>(null)
   const [detailData, setDetailData] = useState<any>(null)
+  const [savingEventId, setSavingEventId] = useState<number | null>(null)
+  const [remindingEventId, setRemindingEventId] = useState<number | null>(null)
+  const [completingEventId, setCompletingEventId] = useState<number | null>(null)
+  const normalizeEvents = (arr: any[]) => arr.map((e:any)=>({
+    ...e,
+    date: e.date || (e.event_date ? new Date(e.event_date).toISOString().slice(0,10) : undefined),
+    time: e.time || e.event_time
+  }))
 
   const fetchTpoAndData = async () => {
     try {
@@ -218,10 +158,31 @@ export default function TPODashboard() {
       const evs = await fetch(`${API_BASE_DEFAULT}/api/v1/events${eventFilter==='All'?'':`?status=${encodeURIComponent(eventFilter)}`}`)
       if (evs.ok) {
         const rows = await evs.json()
-        setTpoEvents(rows)
+        setTpoEvents(normalizeEvents(rows))
       }
     } catch {}
-  }, [user, eventFilter])
+  }
+
+  const jobPostings = [
+    {
+      id: 1,
+      title: 'Software Engineer',
+      company: 'TechCorp',
+      location: 'Mumbai',
+      applicants: 24,
+      posted: '2024-01-05',
+      status: 'Active'
+    },
+    {
+      id: 2,
+      title: 'Data Analyst',
+      company: 'DataSystems',
+      location: 'Pune',
+      applicants: 18,
+      posted: '2024-01-03',
+      status: 'Active'
+    }
+  ]
 
   const createEvent = async () => {
     try {
@@ -246,27 +207,35 @@ export default function TPODashboard() {
         } catch {}
       }
       const dateStr = (eventForm.date || '').slice(0,10)
-      const payloadFull: any = { title: eventForm.title.trim(), description: eventForm.description || '', location: eventForm.location || '', time: (eventForm.time || '').trim(), status: 'Upcoming', form_url: eventForm.form_url || '', category: eventForm.category || '' }
-      if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) payloadFull.date = dateStr
-      let res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payloadFull) })
+      const payloadNode: any = { title: eventForm.title.trim(), description: eventForm.description || 'Event', location: eventForm.location || '', time: (eventForm.time || '').trim(), status: 'Upcoming', form_url: eventForm.form_url || '', category: eventForm.category || '' }
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) payloadNode.date = dateStr
+      let res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payloadNode) })
       if (!res.ok) {
-        try {
-          const errText = await res.text()
-          console.error('Create event error:', errText)
-        } catch {}
-        const payloadMinimal = { title: eventForm.title.trim() }
-        res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payloadMinimal) })
-        if (!res.ok) {
-          try { const errText2 = await res.text(); console.error('Create event minimal error:', errText2) } catch {}
-          alert('Failed to create event')
+        let errText = ''
+        try { errText = await res.text() } catch {}
+        const payloadFastApi = {
+          title: eventForm.title.trim(),
+          description: eventForm.description || 'Event',
+          location: eventForm.location || 'TBD',
+          event_date: (dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) ? new Date(`${dateStr}T00:00:00Z`).toISOString() : new Date().toISOString(),
+          event_time: (eventForm.time || '').trim() || '00:00',
+          created_by: creator || 0
+        }
+        const res2 = await fetch(`${API_BASE_DEFAULT}/api/v1/events`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payloadFastApi) })
+        if (!res2.ok) {
+          let errText2 = ''
+          try { errText2 = await res2.text() } catch {}
+          alert(`Failed to create event`)
+          console.error('Create event errors:', { tpoEndpointError: errText, eventsEndpointError: errText2 })
           return
         }
+        res = res2
       }
       const row = await res.json()
       setTpoEvents(prev => [row, ...prev])
       try {
         const evs = await fetch(`${API_BASE_DEFAULT}/api/v1/events`)
-        if (evs.ok) setTpoEvents(await evs.json())
+        if (evs.ok) { const rows = await evs.json(); setTpoEvents(normalizeEvents(rows)) }
       } catch {}
       setIsCreatingEvent(false)
       setEventForm({ title:'', description:'', location:'', date:'', time:'', form_url:'', category:'' })
@@ -1049,10 +1018,10 @@ export default function TPODashboard() {
                   </Button>
                 </div>
                 <div className="flex gap-2 mb-4">
-                  <Button variant={eventFilter==='Upcoming'?'default':'outline'} onClick={async()=>{ setEventFilter('Upcoming'); const evs = await fetch(`${API_BASE_DEFAULT}/api/v1/events?status=Upcoming`); if (evs.ok) setTpoEvents(await evs.json()) }}>Upcoming</Button>
-                  <Button variant={eventFilter==='Completed'?'default':'outline'} onClick={async()=>{ setEventFilter('Completed'); const evs = await fetch(`${API_BASE_DEFAULT}/api/v1/events?status=Completed`); if (evs.ok) setTpoEvents(await evs.json()) }}>Completed</Button>
-                  <Button variant={eventFilter==='Cancelled'?'default':'outline'} onClick={async()=>{ setEventFilter('Cancelled'); const evs = await fetch(`${API_BASE_DEFAULT}/api/v1/events?status=Cancelled`); if (evs.ok) setTpoEvents(await evs.json()) }}>Cancelled</Button>
-                  <Button variant={eventFilter==='All'?'default':'outline'} onClick={async()=>{ setEventFilter('All'); const evs = await fetch(`${API_BASE_DEFAULT}/api/v1/events`); if (evs.ok) setTpoEvents(await evs.json()) }}>All</Button>
+                  <Button variant={eventFilter==='Upcoming'?'default':'outline'} onClick={async()=>{ setEventFilter('Upcoming'); const evs = await fetch(`${API_BASE_DEFAULT}/api/v1/events?status=Upcoming`); if (evs.ok) { const rows = await evs.json(); setTpoEvents(normalizeEvents(rows)) } }}>Upcoming</Button>
+                  <Button variant={eventFilter==='Completed'?'default':'outline'} onClick={async()=>{ setEventFilter('Completed'); const evs = await fetch(`${API_BASE_DEFAULT}/api/v1/events?status=Completed`); if (evs.ok) { const rows = await evs.json(); setTpoEvents(normalizeEvents(rows)) } }}>Completed</Button>
+                  <Button variant={eventFilter==='Cancelled'?'default':'outline'} onClick={async()=>{ setEventFilter('Cancelled'); const evs = await fetch(`${API_BASE_DEFAULT}/api/v1/events?status=Cancelled`); if (evs.ok) { const rows = await evs.json(); setTpoEvents(normalizeEvents(rows)) } }}>Cancelled</Button>
+                  <Button variant={eventFilter==='All'?'default':'outline'} onClick={async()=>{ setEventFilter('All'); const evs = await fetch(`${API_BASE_DEFAULT}/api/v1/events`); if (evs.ok) { const rows = await evs.json(); setTpoEvents(normalizeEvents(rows)) } }}>All</Button>
                 </div>
                 {isCreatingEvent && (
                   <Card className="border-none shadow-md mb-6">
@@ -1104,7 +1073,7 @@ export default function TPODashboard() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {tpoEvents.map((event) => (
-                    <Card key={event.id} className="border-none shadow-md">
+                    <Card key={event.id} className={`border-none shadow-md ${((event.status||'')==='Completed')?'opacity-60':''}`}>
                       <CardContent className="p-6">
                         <div className="flex justify-between">
                           <div>
@@ -1161,21 +1130,31 @@ export default function TPODashboard() {
                           }}>View Details</Button>
                           {editingEventId === event.id ? (
                             <>
-                              <Button variant="outline" onClick={async()=>{
+                              <Button variant="outline" disabled={savingEventId===event.id} onClick={async()=>{
                                 try {
+                                  if (!editEventForm.title.trim()) { alert('Title is required'); return }
+                                  setSavingEventId(event.id)
                                   const payload:any = { title: editEventForm.title || null, location: editEventForm.location || null, date: editEventForm.date || null, time: editEventForm.time || null, status: editEventForm.status || null }
-                                  const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
+                                  let res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
+                                  if (!res.ok) {
+                                    const payloadFA:any = { title: editEventForm.title || undefined, description: editEventForm.description || undefined, location: editEventForm.location || undefined, event_date: editEventForm.date ? new Date(`${editEventForm.date}T00:00:00Z`).toISOString() : undefined, event_time: editEventForm.time || undefined }
+                                    res = await fetch(`${API_BASE_DEFAULT}/api/v1/events/${event.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payloadFA) })
+                                  }
                                   if (res.ok) {
                                     const updated = await res.json()
                                     setTpoEvents(prev => prev.map(e => e.id === event.id ? { ...e, ...updated } : e))
+                                    alert('Event saved')
                                     setEditingEventId(null)
+                                  } else {
+                                    alert('Failed to save changes')
                                   }
-                                } catch {}
+                                } catch { alert('Failed to save changes') }
+                                finally { setSavingEventId(null) }
                               }}>
                                 <Check className="mr-2 h-4 w-4" />
-                                Save
+                                {savingEventId===event.id?'Saving...':'Save'}
                               </Button>
-                              <Button variant="outline" onClick={()=> setEditingEventId(null)}>
+                              <Button variant="outline" disabled={savingEventId===event.id} onClick={()=>{ setEditEventForm({ title: event.title || '', description: event.description || '', location: event.location || '', date: event.date || '', time: event.time || '', status: event.status || 'Upcoming' }); setEditingEventId(null) }}>
                                 <X className="mr-2 h-4 w-4" />
                                 Cancel
                               </Button>
@@ -1183,29 +1162,40 @@ export default function TPODashboard() {
                           ) : (
                             <Button variant="outline" onClick={()=>{ setEditingEventId(event.id); setEditEventForm({ title: event.title || '', description: event.description || '', location: event.location || '', date: event.date || '', time: event.time || '', status: event.status || 'Upcoming' }) }}>Edit</Button>
                           )}
-                          <Button variant="outline" onClick={async()=>{
+                          <Button variant="outline" disabled={remindingEventId===event.id || ((event.status||'')==='Completed')} onClick={async()=>{
                             try {
-                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}/reminders`, { method:'POST' })
-                              if (res.ok) alert('Reminders sent')
-                            } catch { alert('Failed to send reminders') }
-                          }}>Send Reminder</Button>
-                          <Button variant="destructive" className="bg-red-600 hover:bg-red-700 text-white" onClick={async()=>{
-                            try {
-                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ status: 'Cancelled' }) })
-                              if (res.ok) {
-                                setTpoEvents(prev => prev.filter(e => e.id !== event.id))
+                              const ok = typeof window !== 'undefined' ? window.confirm('Send reminders to registered attendees?') : true
+                              if (!ok) return
+                              setRemindingEventId(event.id)
+                              let res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}/reminders`, { method:'POST' })
+                              if (!res.ok) {
+                                res = await fetch(`${API_BASE_DEFAULT}/api/v1/events/${event.id}/reminders`, { method:'POST' })
                               }
-                            } catch {}
-                          }}>Cancel</Button>
-                          <Button variant="outline" onClick={async()=>{
+                              if (res.ok) {
+                                alert('Reminders sent')
+                              } else {
+                                alert('Failed to send reminders')
+                              }
+                            } catch { alert('Failed to send reminders') }
+                            finally { setRemindingEventId(null) }
+                          }}>{remindingEventId===event.id?'Sending...':'Send Reminder'}</Button>
+                          <Button variant="outline" disabled={completingEventId===event.id || ((event.status||'')==='Completed')} onClick={async()=>{
                             try {
-                              const res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ status: 'Completed' }) })
+                              setCompletingEventId(event.id)
+                              let res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ status: 'Completed' }) })
+                              if (!res.ok) {
+                                res = await fetch(`${API_BASE_DEFAULT}/api/v1/events/${event.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ event_time: event.time || undefined, event_date: event.date ? new Date(`${event.date}T00:00:00Z`).toISOString() : undefined, title: event.title || undefined }) })
+                              }
                               if (res.ok) {
                                 const updated = await res.json()
-                                setTpoEvents(prev => prev.map(e => e.id === event.id ? { ...e, ...updated } : e))
+                                const merged = { ...event, ...updated, status: 'Completed' }
+                                setTpoEvents(prev => prev.map(e => e.id === event.id ? merged : e))
+                              } else {
+                                alert('Failed to mark as completed')
                               }
-                            } catch {}
-                          }}>Mark Completed</Button>
+                            } catch { alert('Failed to mark as completed') }
+                            finally { setCompletingEventId(null) }
+                          }}>{completingEventId===event.id?'Marking...':'Mark Completed'}</Button>
                         </div>
                         {openEventId === event.id && (
                           <div className="mt-4 border-t pt-4">

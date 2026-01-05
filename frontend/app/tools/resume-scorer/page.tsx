@@ -4,39 +4,10 @@ import { useEffect, useState } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://project-2-payz.onrender.com'
-
-interface FileRecord {
-  id: number
-  filename: string
-  file_type: string
-  file_url?: string
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any
-}
-
-interface ScoreResult {
-  score: number
-  suggestions: string[]
-  missingKeywords: string[]
-  coverage: number
-  metricsCount: number
-  actionVerbCount: number
-  sections: {
-    experience: boolean
-    education: boolean
-    projects: boolean
-    skills: boolean
-  }
-  contact: {
-    email: boolean
-    phone: boolean
-    github: boolean
-    linkedin: boolean
-  }
-}
 
 function scoreText(text: string, role: string) {
   const lower = text.toLowerCase()
@@ -47,6 +18,7 @@ function scoreText(text: string, role: string) {
     'Backend Developer': ['api','rest','graphql','database','postgres','mysql','mongodb','redis','rabbitmq','scalability','security','authentication'],
     'Cloud/DevOps': ['docker','kubernetes','terraform','aws','gcp','azure','ci/cd','monitoring','prometheus','grafana','logging']
   }
+  const commonSoft = ['communication','lead','team','collaborat','ownership','problem','critical','stakeholder']
   const actionVerbs = ['led','built','created','designed','implemented','optimized','automated','developed','delivered','deployed','refactored','improved']
   const metricsRegex = /\b\d+%|\b\d{2,}\b/g
   const sections = {
@@ -62,7 +34,7 @@ function scoreText(text: string, role: string) {
     linkedin: /(linkedin\.com)/i.test(text)
   }
   const roleKeys = banks[role] || []
-  // const softHits = commonSoft.filter(k=> lower.includes(k))
+  const softHits = commonSoft.filter(k=> lower.includes(k))
   const roleHits = roleKeys.filter(k=> lower.includes(k))
   const missingKeywords = roleKeys.filter(k=> !lower.includes(k)).slice(0,8)
   const actionCount = actionVerbs.reduce((acc, v)=> acc + (lower.includes(v) ? 1 : 0), 0)
@@ -93,17 +65,17 @@ function scoreText(text: string, role: string) {
 export default function ResumeScorer() {
   const { user } = useUser()
   const [userId, setUserId] = useState<number | null>(null)
-  const [files, setFiles] = useState<FileRecord[]>([])
+  const [files, setFiles] = useState<any[]>([])
   const [resumeText, setResumeText] = useState('')
   const [targetRole, setTargetRole] = useState('Software Engineer')
-  const [result, setResult] = useState<ScoreResult | null>(null)
+  const [result, setResult] = useState<any>(null)
 
   useEffect(() => {
     const load = async () => {
       try {
         let email: string | null = null
         if (user) {
-          // @ts-expect-error -- Clerk types are not fully compatible
+          // @ts-ignore
           email = user.primaryEmailAddress?.emailAddress || user.emailAddresses?.[0]?.emailAddress || null
         }
         if (!email) {

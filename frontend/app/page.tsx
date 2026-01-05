@@ -2,14 +2,15 @@
 
 import { useUser, UserButton } from '@clerk/nextjs'
 import Link from 'next/link'
-import Image from 'next/image'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 
 export default function HomePage() {
-  const { isSignedIn, user } = useUser()
   const clerkReady = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY)
+  const state = clerkReady ? useUser() : ({ isSignedIn: false, user: undefined } as any)
+  const { isSignedIn, user } = state
 
   return (
     <div className="min-h-screen bg-cream">
@@ -51,7 +52,7 @@ export default function HomePage() {
       {/* Hero Section */}
       <section className="py-20 bg-gradient-to-r from-maroon to-maroon/80 text-white">
         <div className="container mx-auto px-4 text-center">
-          <h1 className="text-5xl md:text-6xl font-bold mb-6">Smt. P.N. Doshi Women&apos;s College</h1>
+          <h1 className="text-5xl md:text-6xl font-bold mb-6">Smt. P.N. Doshi Women's College</h1>
           <p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto">
             Empowering women through quality education and exceptional placement opportunities
           </p>
@@ -110,7 +111,7 @@ export default function HomePage() {
             </div>
             <div className="bg-gradient-to-r from-maroon to-gold rounded-xl w-full h-96 flex items-center justify-center shadow-lg">
               <div className="text-center px-4">
-                <h3 className="text-white text-3xl font-bold mb-2">Smt. P.N. Doshi Women&apos;s College</h3>
+                <h3 className="text-white text-3xl font-bold mb-2">Smt. P.N. Doshi Women's College</h3>
                 <p className="text-white text-xl opacity-90">Empowering Women Through Education</p>
               </div>
             </div>
@@ -142,13 +143,10 @@ export default function HomePage() {
             ].map((company, index) => (
               <Card key={index} className="border-none shadow-md hover:shadow-lg transition-shadow bg-white">
                 <CardContent className="p-6 flex items-center justify-center h-32">
-                  <Image 
+                  <img 
                     src={company.logo} 
                     alt={company.name}
-                    width={150}
-                    height={64}
                     className="max-w-full max-h-16 object-contain"
-                    unoptimized
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
                       target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(company.name)}&background=7A1F2A&color=fff&size=128`;
@@ -231,7 +229,7 @@ export default function HomePage() {
                   <div>
                     <h4 className="font-semibold text-lg text-gray-800">Address</h4>
                     <p className="text-gray-600">
-                      Smt. P.N. Doshi Women&apos;s College<br />
+                      Smt. P.N. Doshi Women's College<br />
                       Wadala West, Mumbai - 400031
                     </p>
                   </div>
@@ -360,7 +358,7 @@ export default function HomePage() {
               <div className="space-y-3">
                 <details className="group border border-gray-300 rounded-lg p-4 cursor-pointer hover:border-maroon transition-colors">
                   <summary className="font-semibold text-gray-800 group-open:text-maroon">How do I schedule a campus visit?</summary>
-                  <p className="mt-2 text-gray-600 text-sm">Contact our TPO team through the portal or email placements@smpndoshi.edu.in to schedule your company&apos;s campus recruitment drive.</p>
+                  <p className="mt-2 text-gray-600 text-sm">Contact our TPO team through the portal or email placements@smpndoshi.edu.in to schedule your company's campus recruitment drive.</p>
                 </details>
                 <details className="group border border-gray-300 rounded-lg p-4 cursor-pointer hover:border-maroon transition-colors">
                   <summary className="font-semibold text-gray-800 group-open:text-maroon">What is the hiring process?</summary>
@@ -386,7 +384,7 @@ export default function HomePage() {
                   <p className="mt-2 text-gray-600 text-sm">Over 150+ companies visit our campus annually, offering diverse opportunities across IT, Finance, Marketing, and other sectors.</p>
                 </details>
                 <details className="group border border-gray-300 rounded-lg p-4 cursor-pointer hover:border-maroon transition-colors">
-                  <summary className="font-semibold text-gray-800 group-open:text-maroon">What if I don&apos;t get placed in the first round?</summary>
+                  <summary className="font-semibold text-gray-800 group-open:text-maroon">What if I don't get placed in the first round?</summary>
                   <p className="mt-2 text-gray-600 text-sm">We have continuous recruitment drives throughout the academic year. Additional opportunities are available in subsequent rounds.</p>
                 </details>
               </div>
@@ -442,7 +440,7 @@ export default function HomePage() {
           </div>
           
           <div className="border-t border-cream/20 mt-8 pt-8 text-center text-cream/80">
-            <p>&copy; {new Date().getFullYear()} Smt. P.N. Doshi Women&apos;s College. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} Smt. P.N. Doshi Women's College. All rights reserved.</p>
           </div>
         </div>
       </footer>

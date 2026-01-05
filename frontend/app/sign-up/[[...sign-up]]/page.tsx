@@ -1,17 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 declare global {
   interface Window {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     grecaptcha: any;
   }
 }
 
 export default function SignUpPage() {
+  const router = useRouter();
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://project-2-payz.onrender.com';
   const SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '';
   
   const [role, setRole] = useState("");
@@ -139,11 +141,10 @@ export default function SignUpPage() {
         localStorage.setItem("pendingUser", JSON.stringify({ email: formData.email, role, fullName: formData.fullName }));
       } catch {}
       setIsLoading(false);
-    } catch (error: unknown) {
+    } catch (error: any) {
       console.error("SignUp error:", error);
       setIsLoading(false);
-      const msg = error instanceof Error ? error.message : "Failed to create account. Please try again.";
-      setErrors({ submit: msg });
+      setErrors({ submit: error.message || "Failed to create account. Please try again." });
     }
   };
 

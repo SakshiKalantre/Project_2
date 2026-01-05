@@ -48,15 +48,6 @@ type NotificationItem = {
   read: boolean
 }
 
-interface UserFile {
-  id: number
-  filename?: string
-  title?: string
-  file_type: string
-  uploaded_at?: string
-  file_url?: string
-}
-
 export default function StudentDashboard() {
   const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://project-2-payz.onrender.com'
   const { user } = useUser()
@@ -65,7 +56,7 @@ export default function StudentDashboard() {
   const [userId, setUserId] = useState<number | null>(null)
   const [resumeFile, setResumeFile] = useState<File | null>(null)
   const [certificateFile, setCertificateFile] = useState<File | null>(null)
-  const [userFiles, setUserFiles] = useState<UserFile[]>([])
+  const [userFiles, setUserFiles] = useState<Array<any>>([])
   const [resumeProgress, setResumeProgress] = useState<number>(0)
   const [certProgress, setCertProgress] = useState<number>(0)
   const [profile, setProfile] = useState({
@@ -80,6 +71,11 @@ export default function StudentDashboard() {
   const [jobListings, setJobListings] = useState<JobListing[]>([])
   const [events, setEvents] = useState<EventItem[]>([])
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
+  const normalizeEvents = (arr: any[]) => arr.map((e:any)=>({
+    ...e,
+    date: e.date || (e.event_date ? new Date(e.event_date).toISOString().slice(0,10) : undefined),
+    time: e.time || e.event_time
+  }))
 
   // Fetch data from our API
   useEffect(() => {
@@ -205,7 +201,7 @@ export default function StudentDashboard() {
         const eventsResponse = await fetch(`${API_BASE}/api/v1/events`)
         if (eventsResponse.ok) {
           const eventsData = await eventsResponse.json()
-          setEvents(eventsData)
+          setEvents(normalizeEvents(eventsData))
         }
 
         try {
@@ -262,13 +258,29 @@ export default function StudentDashboard() {
           const res = await fetch(`${API_BASE}/api/v1/events`)
           if (res.ok) {
             const rows = await res.json()
-            setEvents(rows)
+            setEvents(normalizeEvents(rows))
           }
         }
       } catch {}
     }
     refreshEvents()
   }, [activeTab])
+
+  useEffect(() => {
+    let poll: any
+    const pollEvents = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/events`)
+        if (res.ok) {
+          const rows = await res.json()
+          setEvents(normalizeEvents(rows))
+        }
+      } catch {}
+    }
+    pollEvents()
+    poll = setInterval(pollEvents, 15000)
+    return () => { if (poll) clearInterval(poll) }
+  }, [])
 
   useEffect(() => {
     const applyRole = async () => {
