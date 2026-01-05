@@ -4,10 +4,15 @@ import { useEffect, useState } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://project-2-payz.onrender.com'
+
+type UserFile = { id: number; file_type: string; filename?: string; file_url?: string }
+type ScoreSections = { experience: boolean; education: boolean; projects: boolean; skills: boolean }
+type ScoreContact = { email: boolean; phone: boolean; github: boolean; linkedin: boolean }
+type ScoreResult = { score: number; suggestions: string[]; missingKeywords: string[]; coverage: number; metricsCount: number; actionVerbCount: number; sections: ScoreSections; contact: ScoreContact }
+type ClerkUserLike = { primaryEmailAddress?: { emailAddress?: string }; emailAddresses?: Array<{ emailAddress?: string }> }
 
 function scoreText(text: string, role: string) {
   const lower = text.toLowerCase()
@@ -34,7 +39,6 @@ function scoreText(text: string, role: string) {
     linkedin: /(linkedin\.com)/i.test(text)
   }
   const roleKeys = banks[role] || []
-  const softHits = commonSoft.filter(k=> lower.includes(k))
   const roleHits = roleKeys.filter(k=> lower.includes(k))
   const missingKeywords = roleKeys.filter(k=> !lower.includes(k)).slice(0,8)
   const actionCount = actionVerbs.reduce((acc, v)=> acc + (lower.includes(v) ? 1 : 0), 0)
@@ -65,18 +69,18 @@ function scoreText(text: string, role: string) {
 export default function ResumeScorer() {
   const { user } = useUser()
   const [userId, setUserId] = useState<number | null>(null)
-  const [files, setFiles] = useState<any[]>([])
+  const [files, setFiles] = useState<UserFile[]>([])
   const [resumeText, setResumeText] = useState('')
   const [targetRole, setTargetRole] = useState('Software Engineer')
-  const [result, setResult] = useState<any>(null)
+  const [result, setResult] = useState<ScoreResult | null>(null)
 
   useEffect(() => {
     const load = async () => {
       try {
         let email: string | null = null
         if (user) {
-          // @ts-ignore
-          email = user.primaryEmailAddress?.emailAddress || user.emailAddresses?.[0]?.emailAddress || null
+          const u = user as unknown as ClerkUserLike
+          email = u?.primaryEmailAddress?.emailAddress || u?.emailAddresses?.[0]?.emailAddress || null
         }
         if (!email) {
           const stored = typeof window !== 'undefined' ? localStorage.getItem('currentUser') : null
