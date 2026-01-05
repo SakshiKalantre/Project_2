@@ -1167,12 +1167,18 @@ export default function TPODashboard() {
                               const ok = typeof window !== 'undefined' ? window.confirm('Send reminders to registered attendees?') : true
                               if (!ok) return
                               setRemindingEventId(event.id)
-                              let res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}/reminders`, { method:'POST' })
+                              let res = await fetch(`${API_BASE_DEFAULT}/api/v1/events/${event.id}/reminders?target=all`, { method:'POST' })
                               if (!res.ok) {
-                                res = await fetch(`${API_BASE_DEFAULT}/api/v1/events/${event.id}/reminders`, { method:'POST' })
+                                res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}/reminders`, { method:'POST' })
                               }
                               if (res.ok) {
-                                alert('Reminders sent')
+                                try {
+                                  const data = await res.json()
+                                  const count = typeof data === 'object' ? (data.count ?? null) : null
+                                  alert(count!=null ? `Reminders sent to ${count}` : 'Reminders sent')
+                                } catch {
+                                  alert('Reminders sent')
+                                }
                               } else {
                                 alert('Failed to send reminders')
                               }
@@ -1184,7 +1190,7 @@ export default function TPODashboard() {
                               setCompletingEventId(event.id)
                               let res = await fetch(`${API_BASE_DEFAULT}/api/v1/tpo/events/${event.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ status: 'Completed' }) })
                               if (!res.ok) {
-                                res = await fetch(`${API_BASE_DEFAULT}/api/v1/events/${event.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ event_time: event.time || undefined, event_date: event.date ? new Date(`${event.date}T00:00:00Z`).toISOString() : undefined, title: event.title || undefined }) })
+                                res = await fetch(`${API_BASE_DEFAULT}/api/v1/events/${event.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ status: 'Completed', event_time: event.time || undefined, event_date: event.date ? new Date(`${event.date}T00:00:00Z`).toISOString() : undefined, title: event.title || undefined }) })
                               }
                               if (res.ok) {
                                 const updated = await res.json()
