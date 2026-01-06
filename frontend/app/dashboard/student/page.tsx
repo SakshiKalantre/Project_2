@@ -843,17 +843,18 @@ export default function StudentDashboard() {
                         
                         <div className="mt-6">
                           <Button className="w-full bg-maroon hover:bg-maroon/90" disabled={(event.status||'Upcoming')!=='Upcoming'} onClick={async()=>{
+                            // Open form immediately to prevent popup blockers
+                            if (event.form_url) {
+                              const url = event.form_url
+                              const w = window.open(url, '_blank')
+                              if (!w) { const a=document.createElement('a'); a.href=url; a.target='_blank'; document.body.appendChild(a); a.click(); a.remove() }
+                            }
                             try {
                               const stored = typeof window !== 'undefined' ? localStorage.getItem('currentUser') : null
                               const current = stored ? JSON.parse(stored) : null
                               const userRes = await fetch(`${API_BASE}/api/v1/users/by-email/${encodeURIComponent(current?.email)}`)
                               if (userRes.ok) {
                                 const u = await userRes.json()
-                                // Open form first to ensure student gets redirected
-                                if (event.form_url) {
-                                  const w = window.open(event.form_url, '_blank')
-                                  if (!w) { const a=document.createElement('a'); a.href=event.form_url; a.target='_blank'; document.body.appendChild(a); a.click(); a.remove() }
-                                }
                                 const payload = { user_id: u.id, email: current?.email, clerkUserId: (user as any)?.id || null }
                                 let r = await fetch(`${API_BASE}/api/v1/events/${event.id}/register`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
                                 if (!r.ok) {
@@ -865,7 +866,7 @@ export default function StudentDashboard() {
                                   }
                                 }
                               }
-                            } catch { alert('Failed to register') }
+                            } catch { console.error('Failed to register in background') }
                           }}>Register</Button>
                         </div>
                       </CardContent>
